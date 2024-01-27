@@ -50,71 +50,19 @@ jobs:
 
       - run: brew test-bot --only-tap-syntax
 
-  formulae_detect:
-    if: github.repository_owner == 'tenfyzhong' && github.event_name != 'push'
-    runs-on: ubuntu-22.04
-    container:
-      image: ghcr.io/homebrew/ubuntu22.04:master
-    outputs:
-      testing_formulae: ${{ steps.formulae-detect.outputs.testing_formulae }}
-      added_formulae: ${{ steps.formulae-detect.outputs.added_formulae }}
-      deleted_formulae: ${{ steps.formulae-detect.outputs.deleted_formulae }}
-    steps:
-      - name: Set up Homebrew
-        id: set-up-homebrew
-        uses: Homebrew/actions/setup-homebrew@master
-        with:
-          core: false
-          cask: false
-          test-bot: true
-
-      - run: brew test-bot --only-formulae-detect
-        id: formulae-detect
-
-      - name: Fetch detected formulae bottles
-        if: >
-          github.event_name == 'merge_group' ||
-          (contains(github.event.pull_request.labels.*.name, 'CI-published-bottle-commits') &&
-           github.base_ref != 'main')
-        env:
-          TESTING_FORMULAE: ${{ steps.formulae-detect.outputs.formulae_to_fetch }}
-        run: brew test-bot --only-bottles-fetch --testing-formulae="$TESTING_FORMULAE"
-
   tests:
     if: >
       github.event_name == 'pull_request' &&
       !fromjson(needs.setup_tests.outputs.syntax-only)
     strategy:
       matrix:
-        include:
-          - name: "Linux"
-            runner: "ubuntu-latest"
-            container:
-              image: "ghcr.io/homebrew/ubuntu22.04:master"
-              options: "--user=linuxbrew -e GITHUB_ACTIONS_HOMEBREW_SELF_HOSTED"
-            workdir: "/github/home"
-            timeout: 4320
-            cleanup: false
-          - name: "Macos"
-            runner: "macos-latest"
-            timeout: 90
-            cleanup: false
-            workdir: "/github/home"
+        runner: ["ubuntu-latest", "macos-latest"]
     name: Test - ${{matrix.name}}
-    env:
-      TESTING_FORMULAE: ${{needs.formulae_detect.outputs.testing_formulae}}
     permissions:
       pull-requests: read
     runs-on: ${{matrix.runner}}
-    container: ${{matrix.container}}
-    timeout-minutes: ${{matrix.timeout}}
-    defaults:
-      run:
-        shell: /bin/bash -e {0}
-        working-directory: ${{matrix.workdir}}
-    needs: formulae_detect
+    timeout-minutes: 90
     steps:
-      - uses: actions/checkout@v3
       - name: Set up Homebrew
         id: set-up-homebrew
         uses: Homebrew/actions/setup-homebrew@master
@@ -122,9 +70,17 @@ jobs:
           core: false
           cask: false
           test-bot: true
+      - name: Checkout tap
+        run: | 
+          brew tap tenfyzhong/tap
+          cd $(brew --repository tenfyzhong/tap)
+          git checkout ${{github.ref_name}}
+
+      - run: brew test-bot --only-formulae-detect
+        id: formulae-detect
       - name: Install formulae
-        run: brew install --build-from-source ${{env.TESTING_FORMULAE}}
+        run: brew install --build-from-source ${{ steps.formulae-detect.outputs.testing_formulae }}
       - name: Test formulae
-        run: brew test ${{env.TESTING_FORMULAE}}
+        run: brew test ${{ steps.formulae-detect.outputs.testing_formulae }}
       - name: Audit formulae
-        run: brew audit --strict ${{env.TESTING_FORMULAE}}
+        run: brew audit --strict ${{ steps.formulae-detect.outputs.testing_formulae }}
