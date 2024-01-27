@@ -3,7 +3,7 @@ name: CI
 on:
   push:
     branches:
-      - master
+      - main
   pull_request:
   merge_group:
 
@@ -75,7 +75,7 @@ jobs:
         if: >
           github.event_name == 'merge_group' ||
           (contains(github.event.pull_request.labels.*.name, 'CI-published-bottle-commits') &&
-           github.base_ref != 'master')
+           github.base_ref != 'main')
         env:
           TESTING_FORMULAE: ${{ steps.formulae-detect.outputs.formulae_to_fetch }}
         run: brew test-bot --only-bottles-fetch --testing-formulae="$TESTING_FORMULAE"
