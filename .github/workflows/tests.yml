@@ -52,7 +52,7 @@ jobs:
     strategy:
       matrix:
         runner: ["ubuntu-latest", "macos-latest"]
-    name: Test - ${{matrix.name}}
+    name: Test - ${{matrix.runner}}
     permissions:
       pull-requests: read
     runs-on: ${{matrix.runner}}
