@@ -4,8 +4,8 @@
 class Gg < Formula
   desc "Golang version manager"
   homepage "https://github.com/tenfyzhong/gg"
-  url "https://github.com/tenfyzhong/gg/archive/refs/tags/1.0.0.tar.gz"
-  sha256 "f18f72621080cdf3cda4db5d47ce16bd5d8b94486f9ee0e63eef07db70c5fed4"
+  url "https://github.com/tenfyzhong/gg/archive/refs/tags/1.0.1.tar.gz"
+  sha256 "115cc675c77950c62d33e86e608d51e96b4f610c8968c06512172a3c85c0ad27"
   license "MIT"
 
   depends_on "curl"
