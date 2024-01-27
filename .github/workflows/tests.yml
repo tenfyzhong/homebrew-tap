@@ -15,7 +15,6 @@ env:
   GH_REPO: ${{github.repository}}
   GH_NO_UPDATE_NOTIFIER: 1
   GH_PROMPT_DISABLED: 1
-  SCRIPTS_PATH: .github/workflows/scripts
 
 concurrency:
   group: "tests-${{ github.ref }}"
