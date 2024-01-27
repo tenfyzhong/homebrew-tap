@@ -2,7 +2,6 @@ name: CI
 
 on:
   pull_request:
-  merge_group:
 
 env:
   HOMEBREW_DEVELOPER: 1
@@ -22,7 +21,6 @@ permissions:
 
 jobs:
   tests:
-    if: github.event_name == 'pull_request'
     strategy:
       matrix:
         runner: ["ubuntu-latest", "macos-latest"]
@@ -37,19 +35,28 @@ jobs:
         run: |
           /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)"
           brew tap homebrew/test-bot
+          brew tap tenfyzhong/tap
+
+      - name: Extract branch name
+        shell: bash
+        run: echo "branch=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}" >> $GITHUB_OUTPUT
+        id: extract_branch
 
       - name: Checkout tap
         run: | 
-          brew tap tenfyzhong/tap
-          brew tap homebrew/test-bot
           cd $(brew --repository tenfyzhong/tap)
-          git checkout ${{github.sha}}
+          git remote set-url origin ${{github.repositoryUrl}}
+          git pull
+          git checkout ${{steps.extract_branch.outputs.branch}}
 
       - run: brew test-bot --only-formulae-detect
         id: formulae-detect
+
       - name: Install formulae
         run: brew install --build-from-source ${{ steps.formulae-detect.outputs.testing_formulae }}
+
       - name: Test formulae
         run: brew test ${{ steps.formulae-detect.outputs.testing_formulae }}
+
       - name: Audit formulae
         run: brew audit --strict ${{ steps.formulae-detect.outputs.testing_formulae }}
