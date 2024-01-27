@@ -29,6 +29,7 @@ Subcommands:
   ls-remote    list remote version
   install      install specified version
   remove       remove specified version
-  use          print the specified version environment", output
+  use          print the specified version environment
+", output
   end
 end
