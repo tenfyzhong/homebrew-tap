@@ -11,7 +11,7 @@ class Gg < Formula
   depends_on "curl"
 
   def install
-    bin.install 'gg'
+    bin.install "gg"
     bash_completion.install "gg-completion.bash" => "gg"
     zsh_completion.install "_gg" => "_gg"
   end
