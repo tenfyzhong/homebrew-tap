@@ -48,9 +48,7 @@ jobs:
       - run: brew test-bot --only-tap-syntax
 
   tests:
-    if: >
-      github.event_name == 'pull_request' &&
-      !fromjson(needs.setup_tests.outputs.syntax-only)
+    if: github.event_name == 'pull_request'
     strategy:
       matrix:
         runner: ["ubuntu-latest", "macos-latest"]
