@@ -9,8 +9,11 @@ class Gg < Formula
 
   def install
     bin.install "gg"
+    bin.install "ggenv"
     bash_completion.install "gg-completion.bash" => "gg"
+    bash_completion.install "ggenv-completion.bash" => "ggenv"
     zsh_completion.install "_gg" => "_gg"
+    zsh_completion.install "_ggenv" => "_ggenv"
   end
 
   test do
