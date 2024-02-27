@@ -6,6 +6,7 @@ class Gg < Formula
   license "MIT"
 
   depends_on "curl"
+  depends_on "direnv"
 
   def install
     bin.install "gg"
