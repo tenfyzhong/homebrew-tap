@@ -1,8 +1,8 @@
 class St2 < Formula
   desc "`st2` generate go/protobuf/thrift code from json/protobuf/thrift/go/csv code"
   homepage "https://github.com/tenfyzhong/st2"
-  url "https://github.com/tenfyzhong/st2/archive/refs/tags/1.6.1.tar.gz"
-  sha256 "5e642935fba855968c0831f89c497682f34a52a3c9680e61dfce810aebddd556"
+  url "https://github.com/tenfyzhong/st2/archive/refs/tags/1.7.0.tar.gz"
+  sha256 "4a6b89457fbffa53eb41fa5d5e10f943cd6e36a118bcbec2f9d27b8ea913a667"
   license "MIT"
 
   depends_on "go" => :build
