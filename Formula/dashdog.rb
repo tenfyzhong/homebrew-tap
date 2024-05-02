@@ -1,8 +1,8 @@
 class Dashdog < Formula
   desc "dashdog is a tool to generate docset for [dash](https://kapeli.com/dash)"
   homepage "https://github.com/tenfyzhong/dashdog"
-  url "https://github.com/tenfyzhong/dashdog/archive/refs/tags/0.1.0.tar.gz"
-  sha256 "4db95630caa0f670acf3778fd40553df4c83217f579869ef1f3db56b07f1ea66"
+  url "https://github.com/tenfyzhong/dashdog/archive/refs/tags/0.1.1.tar.gz"
+  sha256 "e0ff45e67c9567fce2c9c84620c471ec98ae97c9d2aa452b7b2189bb495ed93e"
   license "MIT"
 
   depends_on "go" => :build
@@ -45,7 +45,7 @@ GLOBAL OPTIONS:
    --cfbundle bundle                 the bundle of the root page, it will overwrite the value of `plist->cfbndle_name` item in the config
    --depth depth                     the max depth of sub page to generate, at least 1, it will overwrite the value of `depth` item in the config (default: 1)
    --name name                       the name of the docset, it will overwrite the value of `name` item in the config file
-   --path path                       the path to generate docset, it will overwrite the value of `path` item in the config file (default: \"$HOME/dashdog-doc/\")
+   --path path                       the path to generate docset, it will overwrite the value of `path` item in the config file (default: \"$HOME/Documents/dashdog-doc/\")
    --path-regex pattern              the sub path which match the pattern will be able to generate, it will overwrite the value of `sub_path_regex` item in the config
    --url url                         the source url of the docset, it will overwrite the value of `url` item in the config
 
