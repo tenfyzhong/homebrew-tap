@@ -1,20 +1,23 @@
 class Dashdog < Formula
   desc "dashdog is a tool to generate docset for [dash](https://kapeli.com/dash)"
   homepage "https://github.com/tenfyzhong/dashdog"
-  url "https://github.com/tenfyzhong/dashdog/archive/refs/tags/0.1.2.tar.gz"
-  sha256 "fe53fe78a5edb6ba298d4c477e7a778ac5201b0c983da2c1c21796fa3e337ac1"
+  url "https://github.com/tenfyzhong/dashdog/archive/refs/tags/0.1.3.tar.gz"
+  sha256 "3f5531d35e71d1d941e1ccfcaabc597441eb0b1a94bbfe5e5bf992f68a32efc3"
   license "MIT"
 
   depends_on "go" => :build
 
   def install
-    system "go", "build", "-ldflags", "-X 'github.com/tenfyzhong/dashdog/cmd/dashdog/config.Version=#{version}'", "-o", bin/"dashdog", "./cmd/dashdog"
+    system "go", "build", "-ldflags", "-X 'github.com/tenfyzhong/dashdog/cmd/dashdog/version.Version=#{version}'", "-o", bin/"dashdog", "./cmd/dashdog"
     bash_completion.install "cmd/dashdog/completions/dashdog.bash" => "dashdog"
     zsh_completion.install "cmd/dashdog/completions/_dashdog" => "dashdog"
     fish_completion.install "cmd/dashdog/completions/dashdog.fish" => "dashdog.fish"
-    bash_completion.install "cmd/dashdog/completions/dashdog-go.bash" => "dashdog-go"
-    zsh_completion.install "cmd/dashdog/completions/_dashdog-go" => "dashdog-go"
-    fish_completion.install "cmd/dashdog/completions/dashdog-go.fish" => "dashdog-go.fish"
+
+    bin.install "cmd/dashdog-go/dashdog-go"
+    bash_completion.install "cmd/dashdog-go/completions/dashdog-go.bash" => "dashdog-go"
+    zsh_completion.install "cmd/dashdog-go/completions/_dashdog-go" => "dashdog-go"
+    fish_completion.install "cmd/dashdog-go/completions/dashdog-go.fish" => "dashdog-go.fish"
+
     pkgshare.install "conf"
   end
 
