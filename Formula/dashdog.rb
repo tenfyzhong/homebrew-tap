@@ -10,12 +10,12 @@ class Dashdog < Formula
   def install
     system "go", "build", "-ldflags", "-X 'github.com/tenfyzhong/dashdog/cmd/dashdog/version.Version=#{version}'", "-o", bin/"dashdog", "./cmd/dashdog"
     bash_completion.install "cmd/dashdog/completions/dashdog.bash" => "dashdog"
-    zsh_completion.install "cmd/dashdog/completions/_dashdog" => "dashdog"
+    zsh_completion.install "cmd/dashdog/completions/_dashdog" => "_dashdog"
     fish_completion.install "cmd/dashdog/completions/dashdog.fish" => "dashdog.fish"
 
     bin.install "cmd/dashdog-go/dashdog-go"
     bash_completion.install "cmd/dashdog-go/completions/dashdog-go.bash" => "dashdog-go"
-    zsh_completion.install "cmd/dashdog-go/completions/_dashdog-go" => "dashdog-go"
+    zsh_completion.install "cmd/dashdog-go/completions/_dashdog-go" => "_dashdog-go"
     fish_completion.install "cmd/dashdog-go/completions/dashdog-go.fish" => "dashdog-go.fish"
 
     pkgshare.install "conf"
@@ -30,7 +30,7 @@ USAGE:
    dashdog -c|--config <file> [--log off] [config options]
 
 VERSION:
-   dev
+   #{version}
 
 AUTHOR:
    tenfyzhong
