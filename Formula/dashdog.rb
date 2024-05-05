@@ -1,8 +1,8 @@
 class Dashdog < Formula
   desc "dashdog is a tool to generate docset for [dash](https://kapeli.com/dash)"
   homepage "https://github.com/tenfyzhong/dashdog"
-  url "https://github.com/tenfyzhong/dashdog/archive/refs/tags/0.1.4.tar.gz"
-  sha256 "8bed83b506fcdc245c3b1416f148409f59db1031559f912e0ffc811bd093da36"
+  url "https://github.com/tenfyzhong/dashdog/archive/refs/tags/0.1.5.tar.gz"
+  sha256 "dfde004cd35d0bc0948b5bbaf22f9f5900abcdf0fa1a3c1f9898ba50002a5dda"
   license "MIT"
 
   depends_on "go" => :build
