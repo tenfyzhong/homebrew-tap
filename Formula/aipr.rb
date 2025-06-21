@@ -10,7 +10,7 @@ class Aipr < Formula
 
   depends_on "git"
   depends_on "gh"
-  depends_on "jq"
+  depends_on "gojq"
   depends_on "llm"
 
   def install
@@ -21,6 +21,20 @@ class Aipr < Formula
     fish_completion.install "completions/aipr.fish" => "aipr.fish"
 
     pkgshare.install "prompts"
+  end
+
+  def caveats
+    <<~EOS
+      After installation, you need to:
+      1. Configure GitHub CLI (gh) if not already done:
+         gh auth login
+
+      2. Set up LLM credentials (e.g., for OpenAI):
+         llm keys set openai
+
+      3. The tool's prompt templates are installed to:
+         #{pkgshare}/prompts
+    EOS
   end
 
   test do
