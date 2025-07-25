@@ -4,8 +4,8 @@
 class Aitag < Formula
   desc "Automatically generate meaningful Git tag messages using LLM."
   homepage "https://github.com/tenfyzhong/aitag"
-  url "https://github.com/tenfyzhong/aitag/archive/refs/tags/0.1.2.tar.gz"
-  sha256 "8a2e39f7190c2b47a782856baf9a20ada7fde253bf55b7e48eb6738df2df6ac9"
+  url "https://github.com/tenfyzhong/aitag/archive/refs/tags/0.1.3.tar.gz"
+  sha256 "6378814fb16f87277c59a34e77dd6144276c1e5b887e8374478d847afab508ff"
   license "MIT"
 
   depends_on "git"
