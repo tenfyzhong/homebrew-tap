@@ -4,8 +4,8 @@
 class Aipr < Formula
   desc "A CLI tool to automate GitHub PR creation/updates using LLMs (like OpenAI) to generate meaningful PR titles and descriptions."
   homepage "https://github.com/tenfyzhong/aipr"
-  url "https://github.com/tenfyzhong/aipr/archive/refs/tags/0.1.6.tar.gz"
-  sha256 "d365a04ef8f357b87024698dee869ff38af45f2224336f5667ca83b20c88bf85"
+  url "https://github.com/tenfyzhong/aipr/archive/refs/tags/0.1.7.tar.gz"
+  sha256 "ff25f70c433d2a648419781049a23cc47d371ae018fe5292253a81bdcfd9a7e0"
   license "MIT"
 
   depends_on "git"
