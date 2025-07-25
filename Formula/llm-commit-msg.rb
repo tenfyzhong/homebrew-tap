@@ -4,8 +4,8 @@
 class LlmCommitMsg < Formula
   desc "A git hook that uses a large language model to automatically generate a commit message from the staged changes. "
   homepage "https://github.com/tenfyzhong/llm-commit-msg"
-  url "https://github.com/tenfyzhong/llm-commit-msg/archive/refs/tags/0.1.0.tar.gz"
-  sha256 "3535a32675b474f3bae7c807eb48c540ebdc396c0ffee32429f8b39289f47a34"
+  url "https://github.com/tenfyzhong/llm-commit-msg/archive/refs/tags/0.1.1.tar.gz"
+  sha256 "a702ac5fada7fdc531464b178de330ade4fabded0fe7f0e13ee6d06a3652b478"
   license "MIT"
 
   depends_on "git"
