@@ -1,18 +1,30 @@
 # Documentation: https://docs.brew.sh/Formula-Cookbook
 #                https://rubydoc.brew.sh/Formula
 # PLEASE REMOVE ALL GENERATED COMMENTS BEFORE SUBMITTING YOUR PULL REQUEST!
-class LlmCommitMsg < Formula
-  desc "A git hook that uses a large language model to automatically generate a commit message from the staged changes. "
-  homepage "https://github.com/tenfyzhong/llm-commit-msg"
-  url "https://github.com/tenfyzhong/llm-commit-msg/archive/refs/tags/0.1.1.tar.gz"
-  sha256 "a702ac5fada7fdc531464b178de330ade4fabded0fe7f0e13ee6d06a3652b478"
+class Gitai < Formula
+  desc "`gitai` is a set of command-line tools that use AI to help you with your Git workflow. It can help you write commit messages, create pull requests, and generate tags."
+  homepage "https://github.com/tenfyzhong/gitai"
+  url "https://github.com/tenfyzhong/gitai/archive/refs/tags/0.1.0.tar.gz"
+  sha256 "59228c9c6bccb4dba5042dbf0351721f3604bab5e5b02dac5eb5618fffad5b33"
   license "MIT"
 
   depends_on "git"
+  depends_on "gh"
+  depends_on "gojq"
   depends_on "llm"
 
   def install
-    bin.install "llm-commit-msg"
+    bin.install "aipr"
+    bin.install "aitag"
+    bin.install "ai-commit-msg"
+
+    bash_completion.install "completions/aipr.bash" => "aipr"
+    zsh_completion.install "completions/_aipr" => "_aipr"
+    fish_completion.install "completions/aipr.fish" => "aipr.fish"
+    bash_completion.install "completions/aitag.bash" => "aitag"
+    zsh_completion.install "completions/_aitag" => "_aitag"
+    fish_completion.install "completions/aitag.fish" => "aitag.fish"
+
     pkgshare.install "prompts"
   end
 
@@ -25,7 +37,10 @@ class LlmCommitMsg < Formula
 
         2. The tool's prompt templates are installed to:
            #{pkgshare}/prompts
-      # Setup git hook(example)
+      # Setup gh
+        1. Configure GitHub CLI (gh) if not already done:
+           gh auth login
+      # Setup git prepare-commit-msg hook
       ## Global Setup
         1. Create global hooks directory
            mkdir -p ~/.git-hooks
