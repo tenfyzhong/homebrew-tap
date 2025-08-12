@@ -47,12 +47,12 @@ class Gitai < Formula
         2. Configure Git to use this directory
            git config --global core.hooksPath .git-hooks
         3. Link the hook script:
-           ln -s "$(which llm-commit-msg)" ~/.git-hooks/prepare-commit-msg
+           ln -s "$(which ai-commit-msg)" ~/.git-hooks/prepare-commit-msg
       ## Per-Project Setup
         1. Navigate into your project's hooks directory
            cd /path/to/your/repo/.git/hooks
         2. Link the hook script:
-           ln -s "$(which llm-commit-msg)" ./prepare-commit-msg
+           ln -s "$(which ai-commit-msg)" ./prepare-commit-msg
     EOS
   end
 
