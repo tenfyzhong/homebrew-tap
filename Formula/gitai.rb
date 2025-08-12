@@ -4,8 +4,8 @@
 class Gitai < Formula
   desc "`gitai` is a set of command-line tools that use AI to help you with your Git workflow. It can help you write commit messages, create pull requests, and generate tags."
   homepage "https://github.com/tenfyzhong/gitai"
-  url "https://github.com/tenfyzhong/gitai/archive/refs/tags/0.2.0.tar.gz"
-  sha256 "305c3fb8a4e9b4f9195e734d147b50915f47d0f24b827b3155b131c286c05660"
+  url "https://github.com/tenfyzhong/gitai/archive/refs/tags/0.2.1.tar.gz"
+  sha256 "af132004c9f0437c5ff83969382825b3e45f54a0f580651f97a86cc5dfe34ff8"
   license "MIT"
 
   depends_on "git"
