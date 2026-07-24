@@ -1,22 +1,20 @@
-# Documentation: https://docs.brew.sh/Formula-Cookbook
-#                https://rubydoc.brew.sh/Formula
-# PLEASE REMOVE ALL GENERATED COMMENTS BEFORE SUBMITTING YOUR PULL REQUEST!
 class Gitai < Formula
-  desc "`gitai` is a set of command-line tools that use AI to help you with your Git workflow. It can help you write commit messages, create pull requests, and generate tags."
+  desc "AI-assisted Git commit messages, pull requests, and tags"
   homepage "https://github.com/tenfyzhong/gitai"
-  url "https://github.com/tenfyzhong/gitai/archive/refs/tags/0.4.0.tar.gz"
-  sha256 "d122ad8d253a862a9b79e6b5133cf0a7f8d40c96743c7920b82bcf172bf3c8a2"
+  url "https://github.com/tenfyzhong/gitai/archive/refs/tags/1.0.1.tar.gz"
+  sha256 "0892c26cac95af1ffc3c57b2389a73cc607b1fa422ce8db3687c13ad9a98581c"
   license "MIT"
 
-  depends_on "git"
   depends_on "gh"
-  depends_on "gojq"
-  depends_on "llm"
+  depends_on "git"
+  depends_on "jq"
 
   def install
     bin.install "aipr"
     bin.install "aitag"
     bin.install "ai-commit-msg"
+    bin.install "gitai-agent"
+    bin.install "gitai-common.sh"
 
     bash_completion.install "completions/aipr.bash" => "aipr"
     zsh_completion.install "completions/_aipr" => "_aipr"
@@ -31,11 +29,11 @@ class Gitai < Formula
   def caveats
     <<~EOS
       After installation, you need to:
-      # Setup llm
-        1. Setup LLM credentials (e.g., for OpenAI):
-           llm keys set openai
+      # Setup an AI agent
+        1. Install and configure one supported agent: Pi, Oh My Pi, Codex,
+           or Claude Code. Set GITAI_AGENT to select one explicitly.
 
-        2. The tool's prompt templates are installed to:
+        2. The prompt templates are installed to:
            #{pkgshare}/prompts
       # Setup gh
         1. Configure GitHub CLI (gh) if not already done:
@@ -57,5 +55,9 @@ class Gitai < Formula
   end
 
   test do
+    %w[ai-commit-msg aipr aitag gitai-agent gitai-common.sh].each do |file|
+      assert_path_exists bin/file
+    end
+    assert_match "Usage: gitai-agent", shell_output("#{bin}/gitai-agent 2>&1", 2)
   end
 end
