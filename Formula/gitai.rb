@@ -7,9 +7,15 @@ class Gitai < Formula
 
   depends_on "gh"
   depends_on "git"
-  depends_on "jq"
+  depends_on "gojq"
 
   def install
+    inreplace "aipr" do |s|
+      s.gsub!(/(?<!-)\bjq(?=\s+-)/, "gojq")
+      s.gsub!("gitai_check_required_commands git gh jq", "gitai_check_required_commands git gh gojq")
+    end
+    inreplace "gitai-common.sh", /(?<!-)\bjq(?=\s+-)/, "gojq"
+
     bin.install "aipr"
     bin.install "aitag"
     bin.install "ai-commit-msg"
@@ -59,5 +65,7 @@ class Gitai < Formula
       assert_path_exists bin/file
     end
     assert_match "Usage: gitai-agent", shell_output("#{bin}/gitai-agent 2>&1", 2)
+    assert_equal "{\"body\":\"ok\"}\n",
+                 pipe_output("bash -c '. #{bin}/gitai-common.sh; gitai_extract_json_object'", "{\"body\":\"ok\"}\n")
   end
 end
