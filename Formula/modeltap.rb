@@ -17,28 +17,28 @@ class Modeltap < Formula
 
     config_dir = etc/"modeltap"
     config_dir.mkpath
-    (config_dir/"certs").mkpath
+    certs_dir = config_dir/"certs"
+    certs_dir.mkpath
     config_path = config_dir/"config.yaml"
+    cert_path = certs_dir/"ca-cert.pem"
+    key_path = certs_dir/"ca-key.pem"
+
     unless config_path.exist?
-      config_path.write <<~YAML
-        # Configure sites, TLS MITM, and telemetry before starting the service.
-        proxy:
-          listen: 127.0.0.1:8080
-
-        logging:
-          level: info
-
-        tls:
-          ca_cert_file: #{etc}/modeltap/certs/ca-cert.pem
-          ca_key_file: #{etc}/modeltap/certs/ca-key.pem
-
-        sites: []
-
-        pricing:
-          timezone: UTC
-          rules: []
-      YAML
+      config = (buildpath/"config.sample.yaml").read
+      config.gsub!("./certs/modeltap-ca-cert.pem", cert_path.to_s)
+      config.gsub!("./certs/modeltap-ca-key.pem", key_path.to_s)
+      config_path.write config
     end
+
+    if !cert_path.exist? && !key_path.exist?
+      system bin/"modeltap", "ca-init",
+             "--cert", cert_path,
+             "--key", key_path
+    end
+
+    bash_completion.install "completions/modeltap.bash"
+    zsh_completion.install "completions/_modeltap"
+    fish_completion.install "completions/modeltap.fish"
   end
 
   service do
@@ -51,13 +51,11 @@ class Modeltap < Formula
   def caveats
     <<~EOS
       To configure and start ModelTap:
-        1. Create CA certificates:
-             modeltap ca-init \\
-               --cert "$(brew --prefix)/etc/modeltap/certs/ca-cert.pem" \\
-               --key "$(brew --prefix)/etc/modeltap/certs/ca-key.pem"
-        2. Trust the CA certificate in Keychain:
+        1. Trust the CA certificate in Keychain:
              sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain \\
                "$(brew --prefix)/etc/modeltap/certs/ca-cert.pem"
+        2. Configure Node.js clients to trust the CA certificate:
+             export NODE_EXTRA_CA_CERTS="$(brew --prefix)/etc/modeltap/certs/ca-cert.pem"
         3. Edit #{etc}/modeltap/config.yaml to configure sites, pricing, TLS, and telemetry.
         4. Start the service:
              brew services start tenfyzhong/tap/modeltap
@@ -70,9 +68,11 @@ class Modeltap < Formula
 
   test do
     assert_path_exists etc/"modeltap/config.yaml"
-    assert_match "timezone: UTC", (etc/"modeltap/config.yaml").read
-    assert_match "ca_cert_file: #{etc}/modeltap/certs/ca-cert.pem", (etc/"modeltap/config.yaml").read
-    assert_match "ca_key_file: #{etc}/modeltap/certs/ca-key.pem", (etc/"modeltap/config.yaml").read
-    assert_match "modeltap #{version}", shell_output("#{bin}/modeltap --version")
+    assert_path_exists etc/"modeltap/certs/ca-cert.pem"
+    assert_path_exists etc/"modeltap/certs/ca-key.pem"
+    assert_path_exists bash_completion/"modeltap.bash"
+    assert_path_exists zsh_completion/"_modeltap"
+    assert_path_exists fish_completion/"modeltap.fish"
+    assert_match "modeltap", shell_output("#{bin}/modeltap --version")
   end
 end
