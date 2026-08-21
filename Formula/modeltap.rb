@@ -1,8 +1,8 @@
 class Modeltap < Formula
   desc "MITM AI traffic monitor with configurable egress proxies"
   homepage "https://github.com/tenfyzhong/modeltap"
-  url "https://github.com/tenfyzhong/modeltap/archive/refs/tags/0.1.0.tar.gz"
-  sha256 "b572867fbe2501bab6c8c236a949ca62cc1ac3aeaab75134f9ec29f8700501b5"
+  url "https://github.com/tenfyzhong/modeltap/archive/refs/tags/0.2.0.tar.gz"
+  sha256 "be8fda70d678612dca53ddcb64f5060502c6ec83224f6fcf226166ac29bd46b2"
   license "MIT"
 
   depends_on "rust" => :build
