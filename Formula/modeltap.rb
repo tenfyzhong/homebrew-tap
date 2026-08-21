@@ -12,6 +12,7 @@ class Modeltap < Formula
 
     config_dir = etc/"modeltap"
     config_dir.mkpath
+    (config_dir/"certs").mkpath
     config_path = config_dir/"config.yaml"
     unless config_path.exist?
       config_path.write <<~YAML
@@ -21,6 +22,10 @@ class Modeltap < Formula
 
         logging:
           level: info
+
+        tls:
+          ca_cert_file: #{etc}/modeltap/certs/ca-cert.pem
+          ca_key_file: #{etc}/modeltap/certs/ca-key.pem
 
         sites: []
 
@@ -41,8 +46,12 @@ class Modeltap < Formula
   def caveats
     <<~EOS
       To configure and start ModelTap:
-        1. Edit #{etc}/modeltap/config.yaml to configure sites, pricing, TLS, and telemetry.
-        2. Start the service:
+        1. Create CA certificates:
+             modeltap ca-init \\
+               --cert "$(brew --prefix)/etc/modeltap/certs/ca-cert.pem" \\
+               --key "$(brew --prefix)/etc/modeltap/certs/ca-key.pem"
+        2. Edit #{etc}/modeltap/config.yaml to configure sites, pricing, TLS, and telemetry.
+        3. Start the service:
              brew services start tenfyzhong/tap/modeltap
 
       Logs are written to:
@@ -54,6 +63,8 @@ class Modeltap < Formula
   test do
     assert_path_exists etc/"modeltap/config.yaml"
     assert_match "timezone: UTC", (etc/"modeltap/config.yaml").read
+    assert_match "ca_cert_file: #{etc}/modeltap/certs/ca-cert.pem", (etc/"modeltap/config.yaml").read
+    assert_match "ca_key_file: #{etc}/modeltap/certs/ca-key.pem", (etc/"modeltap/config.yaml").read
     assert_match "modeltap #{version}", shell_output("#{bin}/modeltap --version")
   end
 end
