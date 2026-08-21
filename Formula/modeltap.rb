@@ -50,8 +50,11 @@ class Modeltap < Formula
              modeltap ca-init \\
                --cert "$(brew --prefix)/etc/modeltap/certs/ca-cert.pem" \\
                --key "$(brew --prefix)/etc/modeltap/certs/ca-key.pem"
-        2. Edit #{etc}/modeltap/config.yaml to configure sites, pricing, TLS, and telemetry.
-        3. Start the service:
+        2. Trust the CA certificate in Keychain:
+             sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain \\
+               "$(brew --prefix)/etc/modeltap/certs/ca-cert.pem"
+        3. Edit #{etc}/modeltap/config.yaml to configure sites, pricing, TLS, and telemetry.
+        4. Start the service:
              brew services start tenfyzhong/tap/modeltap
 
       Logs are written to:
