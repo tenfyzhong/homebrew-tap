@@ -42,7 +42,7 @@ class Modeltap < Formula
   end
 
   service do
-    run [opt_bin/"modeltap", "run", etc/"modeltap/config.yaml"]
+    run [opt_bin/"modeltap", "run", "-c", etc/"modeltap/config.yaml"]
     keep_alive true
     log_path var/"log/modeltap.log"
     error_log_path var/"log/modeltap.err.log"
