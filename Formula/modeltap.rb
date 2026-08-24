@@ -15,30 +15,35 @@ class Modeltap < Formula
   def install
     system "cargo", "install", *std_cargo_args(path: ".")
 
-    config_dir = etc/"modeltap"
-    config_dir.mkpath
-    certs_dir = config_dir/"certs"
-    certs_dir.mkpath
-    config_path = config_dir/"config.yaml"
-    cert_path = certs_dir/"ca-cert.pem"
-    key_path = certs_dir/"ca-key.pem"
-
-    unless config_path.exist?
-      config = (buildpath/"config.sample.yaml").read
-      config.gsub!("./certs/modeltap-ca-cert.pem", cert_path.to_s)
-      config.gsub!("./certs/modeltap-ca-key.pem", key_path.to_s)
-      config_path.write config
-    end
-
-    if !cert_path.exist? && !key_path.exist?
-      system bin/"modeltap", "ca-init",
-             "--cert", cert_path,
-             "--key", key_path
-    end
+    pkgshare.install "config.sample.yaml"
 
     bash_completion.install "completions/modeltap.bash"
     zsh_completion.install "completions/_modeltap"
     fish_completion.install "completions/modeltap.fish"
+  end
+
+  def post_install
+    config_dir = etc/"modeltap"
+    config_dir.mkpath
+    certs_dir = config_dir/"certs"
+    certs_dir.mkpath
+
+    config_path = config_dir/"config.yaml"
+    cert_path = certs_dir/"ca-cert.pem"
+    key_path = certs_dir/"ca-key.pem"
+
+    if !cert_path.exist? || !key_path.exist?
+      system opt_bin/"modeltap", "ca-init",
+             "--cert", cert_path,
+             "--key", key_path
+    end
+
+    return if config_path.exist?
+
+    config = (pkgshare/"config.sample.yaml").read
+    config.gsub!("./certs/modeltap-ca-cert.pem", cert_path.to_s)
+    config.gsub!("./certs/modeltap-ca-key.pem", key_path.to_s)
+    config_path.write config
   end
 
   service do
