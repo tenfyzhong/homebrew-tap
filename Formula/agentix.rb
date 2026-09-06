@@ -1,13 +1,13 @@
 class Agentix < Formula
   desc "Control local coding-agent sessions from IM"
   homepage "https://github.com/tenfyzhong/agentix"
-  url "https://github.com/tenfyzhong/agentix/archive/refs/tags/0.1.4.tar.gz"
-  sha256 "2a43085ed7695360b1b41955a43ebee7b83f91138081d3dfc2c46f2a5043be3a"
+  url "https://github.com/tenfyzhong/agentix/archive/refs/tags/0.2.0.tar.gz"
+  sha256 "118b4da4509ee23d22121012fd326990a850286a3e69427a0abbb918841f0ec3"
   license "MIT"
 
   bottle do
-    root_url "https://github.com/tenfyzhong/agentix/releases/download/0.1.4"
-    sha256 cellar: :any_skip_relocation, arm64_sequoia: "457d194725661439b9192034a3d5e84841b4ef104cb1e9aad14c8e31511a4d6f"
+    root_url "https://github.com/tenfyzhong/agentix/releases/download/0.2.0"
+    sha256 cellar: :any_skip_relocation, arm64_sequoia: "2126aaccb1ad1bcd5afcfbbf7dc78412421ca6aee628c053520c6b96ccded371"
   end
 
   depends_on "protobuf" => :build
