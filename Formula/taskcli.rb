@@ -5,6 +5,11 @@ class Taskcli < Formula
   sha256 "118b4da4509ee23d22121012fd326990a850286a3e69427a0abbb918841f0ec3"
   license "MIT"
 
+  bottle do
+    root_url "https://github.com/tenfyzhong/agentix/releases/download/0.2.0"
+    sha256 cellar: :any_skip_relocation, arm64_sequoia: "acfefcff81aa57e8408cb3cbef80f12b33e75527141334a39d3281afbec4bf84"
+  end
+
   depends_on "rust" => :build
 
   def install
