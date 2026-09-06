@@ -1,14 +1,10 @@
 class Agentix < Formula
   desc "Control local coding-agent sessions from IM"
   homepage "https://github.com/tenfyzhong/agentix"
-  url "https://github.com/tenfyzhong/agentix/archive/refs/tags/0.1.4.tar.gz"
-  sha256 "2a43085ed7695360b1b41955a43ebee7b83f91138081d3dfc2c46f2a5043be3a"
+  url "https://github.com/tenfyzhong/agentix/archive/refs/tags/0.2.0.tar.gz"
+  sha256 "118b4da4509ee23d22121012fd326990a850286a3e69427a0abbb918841f0ec3"
   license "MIT"
-
-  bottle do
-    root_url "https://github.com/tenfyzhong/agentix/releases/download/0.1.4"
-    sha256 cellar: :any_skip_relocation, arm64_sequoia: "457d194725661439b9192034a3d5e84841b4ef104cb1e9aad14c8e31511a4d6f"
-  end
+  revision 1
 
   depends_on "protobuf" => :build
   depends_on "rust" => :build
@@ -17,6 +13,10 @@ class Agentix < Formula
     system "bash", ".github/scripts/set-release-version.sh", version.to_s
     system "cargo", "install", *std_cargo_args(path: "crates/agentix")
     pkgshare.install "config/agentix.example.toml"
+
+    bash_completion.install "completions/agentix.bash" => "agentix"
+    zsh_completion.install "completions/_agentix"
+    fish_completion.install "completions/agentix.fish"
   end
 
   service do
@@ -38,6 +38,9 @@ class Agentix < Formula
   end
 
   test do
+    assert_path_exists bash_completion/"agentix"
+    assert_path_exists zsh_completion/"_agentix"
+    assert_path_exists fish_completion/"agentix.fish"
     assert_path_exists pkgshare/"agentix.example.toml"
     assert_match version.to_s, shell_output("#{bin}/agentix --version")
   end
