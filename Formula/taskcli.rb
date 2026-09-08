@@ -1,13 +1,13 @@
 class Taskcli < Formula
   desc "Coordinate agent tasks with leases, plans, and Markdown boards"
   homepage "https://github.com/tenfyzhong/agentix"
-  url "https://github.com/tenfyzhong/agentix/archive/refs/tags/0.2.3.tar.gz"
-  sha256 "12b9c280da528dedc23253284cf70d0517568bcbe9752e270740413c3ae3a2ee"
+  url "https://github.com/tenfyzhong/agentix/archive/refs/tags/0.2.4.tar.gz"
+  sha256 "f0d976fab3bd1b86f0951f7431caa829c34b730a4bf1b6ce4208aee3520096e5"
   license "MIT"
 
   bottle do
-    root_url "https://github.com/tenfyzhong/agentix/releases/download/0.2.3"
-    sha256 cellar: :any_skip_relocation, arm64_sequoia: "da2531ea205b70c00a0f3c9ca8a82801fa48cd43813cc86584b786bbb819ac44"
+    root_url "https://github.com/tenfyzhong/agentix/releases/download/0.2.4"
+    sha256 cellar: :any_skip_relocation, arm64_sequoia: "cb0bda316cde14a0367bfe9521300b8e8ba211736bd689d274428ad6873df04c"
   end
 
   depends_on "rust" => :build
