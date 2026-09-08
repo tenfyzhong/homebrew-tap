@@ -31,7 +31,7 @@ class Taskcli < Formula
 
     (testpath/"documents").mkpath
     system bin/"taskcli", "--config", testpath/"config.toml", "init",
-           "--format", "markdown", "--root", testpath/"documents",
+           "--root", testpath/"documents",
            "--database", testpath/"tasks.sqlite3"
     assert_path_exists testpath/"config.toml"
     assert_path_exists testpath/"tasks.sqlite3"
