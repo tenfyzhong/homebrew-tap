@@ -34,22 +34,16 @@ jobs:
         id: set-up-homebrew
         run: |
           /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)"
-          brew tap homebrew/test-bot
           brew tap tenfyzhong/tap
-
-      - name: Extract branch name
-        shell: bash
-        run: echo "branch=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}" >> $GITHUB_OUTPUT
-        id: extract_branch
+          brew trust tenfyzhong/tap
 
       - name: Checkout tap
-        run: | 
-          cd $(brew --repository tenfyzhong/tap)
-          git remote set-url origin ${{github.repositoryUrl}}
-          git pull
-          git checkout ${{steps.extract_branch.outputs.branch}}
+        run: |
+          cd "$(brew --repository tenfyzhong/tap)"
+          git fetch origin "$GITHUB_REF"
+          git checkout --detach FETCH_HEAD
 
-      - run: brew test-bot --only-formulae-detect
+      - run: brew test-bot --only-formulae-detect --tap=tenfyzhong/tap
         id: formulae-detect
 
       - name: Install formulae
