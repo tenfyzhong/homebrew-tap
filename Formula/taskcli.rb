@@ -24,12 +24,13 @@ class Taskcli < Formula
     assert_path_exists pkgshare/"taskcli.example.toml"
     assert_match version.to_s, shell_output("#{bin}/taskcli --version")
 
-    (testpath/"documents").mkpath
+    (testpath/"documents/.obsidian").mkpath
     system bin/"taskcli", "--config", testpath/"config.toml", "init",
            "--root", testpath/"documents",
            "--database", testpath/"tasks.sqlite3"
     assert_path_exists testpath/"config.toml"
     assert_path_exists testpath/"tasks.sqlite3"
+    assert_path_exists testpath/"documents/Dashboard.base"
 
     output = shell_output("#{bin}/taskcli --config #{testpath}/config.toml --json project list")
     result = JSON.parse(output)
