@@ -50,11 +50,47 @@ jobs:
       - run: brew test-bot --only-formulae-detect --tap=tenfyzhong/tap
         id: formulae-detect
 
-      - name: Install formulae
-        run: brew install --build-from-source ${{ steps.formulae-detect.outputs.testing_formulae }}
+      - name: Select formula versions
+        id: formula-versions
+        if: steps.formulae-detect.outputs.testing_formulae != ''
+        env:
+          TESTING_FORMULAE: ${{ steps.formulae-detect.outputs.testing_formulae }}
+        run: |
+          brew info --json=v2 $TESTING_FORMULAE | ruby -rjson -e '
+            formulae = JSON.parse(STDIN.read).fetch("formulae")
+            stable, head = formulae.partition { |formula| formula.fetch("versions")["stable"] }
+            File.open(ENV.fetch("GITHUB_OUTPUT"), "a") do |output|
+              output.puts "stable=#{stable.map { |formula| formula.fetch("full_name") }.join(" ")}"
+              output.puts "head=#{head.map { |formula| formula.fetch("full_name") }.join(" ")}"
+            end
+          '
 
-      - name: Test formulae
-        run: brew test ${{ steps.formulae-detect.outputs.testing_formulae }}
+      - name: Install stable formulae
+        if: steps.formula-versions.outputs.stable != ''
+        env:
+          FORMULAE: ${{ steps.formula-versions.outputs.stable }}
+        run: brew install --build-from-source $FORMULAE
+
+      - name: Install HEAD formulae
+        if: steps.formula-versions.outputs.head != ''
+        env:
+          FORMULAE: ${{ steps.formula-versions.outputs.head }}
+        run: brew install --HEAD $FORMULAE
+
+      - name: Test stable formulae
+        if: steps.formula-versions.outputs.stable != ''
+        env:
+          FORMULAE: ${{ steps.formula-versions.outputs.stable }}
+        run: brew test $FORMULAE
+
+      - name: Test HEAD formulae
+        if: steps.formula-versions.outputs.head != ''
+        env:
+          FORMULAE: ${{ steps.formula-versions.outputs.head }}
+        run: brew test --HEAD $FORMULAE
 
       - name: Audit formulae
-        run: brew audit --strict ${{ steps.formulae-detect.outputs.testing_formulae }}
+        if: steps.formulae-detect.outputs.testing_formulae != ''
+        env:
+          FORMULAE: ${{ steps.formulae-detect.outputs.testing_formulae }}
+        run: brew audit --strict $FORMULAE
