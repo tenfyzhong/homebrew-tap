@@ -69,7 +69,7 @@ jobs:
         if: steps.formula-versions.outputs.stable != ''
         env:
           FORMULAE: ${{ steps.formula-versions.outputs.stable }}
-        run: brew install --build-from-source $FORMULAE
+        run: brew install $FORMULAE
 
       - name: Install HEAD formulae
         if: steps.formula-versions.outputs.head != ''
