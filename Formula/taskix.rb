@@ -4,8 +4,15 @@
 class Taskix < Formula
   desc "Coordinate agent tasks with leases, plans, and Markdown boards"
   homepage "https://github.com/tenfyzhong/agentix"
+  url "https://github.com/tenfyzhong/agentix/archive/refs/tags/0.3.0.tar.gz"
+  sha256 "6cdad285121943e2b6ac3504102c81a9e77e391f678e43d8af55651ae50d2bd8"
   license "MIT"
   head "https://github.com/tenfyzhong/agentix.git", branch: "main"
+
+  bottle do
+    root_url "https://github.com/tenfyzhong/agentix/releases/download/0.3.0"
+    sha256 cellar: :any_skip_relocation, arm64_sequoia: "950a1e65d79c3332f15f3dc69974ac27af1cd4a9b9b7b3f534a5962848286e00"
+  end
 
   depends_on "rust" => :build
 
