@@ -1,15 +1,15 @@
 class Agentix < Formula
   desc "Control local coding-agent sessions from IM"
   homepage "https://github.com/tenfyzhong/agentix"
-  url "https://github.com/tenfyzhong/agentix/archive/refs/tags/0.3.1.tar.gz"
-  sha256 "4387e4ae3f447dd80d6387c55eb692a3b20054c1250588ec48d4a4f43cb6c1da"
+  url "https://github.com/tenfyzhong/agentix/archive/refs/tags/0.4.0.tar.gz"
+  sha256 "de9c85652679d5b4aa354c5fd7e07a6d455457a3205bc8cba952413226d85037"
   license "MIT"
 
   bottle do
-    root_url "https://github.com/tenfyzhong/agentix/releases/download/0.3.1"
-    sha256 cellar: :any_skip_relocation, arm64_sequoia: "5ad3491e5b1f34018e5317d9ac7e9c4a960651c98ea0a560315dea0cb41e2ec5"
-    sha256 cellar: :any,                 arm64_linux:   "d5ebe24aea7f3fdcfb889320c421a4a930aa098e26c2d1e12071eb4e95a6ac67"
-    sha256 cellar: :any,                 x86_64_linux:  "7d2e12d34c0ffe582a1638c584e1a3a0b52f36b53f15d873bed3ae7d57e56ab2"
+    root_url "https://github.com/tenfyzhong/agentix/releases/download/0.4.0"
+    sha256 cellar: :any_skip_relocation, arm64_sequoia: "66d3b3f3709d0fa0ea02bacf207ab1b6e9b43e8d0f63ff1ede43c2419810223b"
+    sha256 cellar: :any,                 arm64_linux:   "93b9fc46f17d6fe31896a1e2337d2af0f546174965b49bc11084587ad5b662ed"
+    sha256 cellar: :any,                 x86_64_linux:  "8ce1f1ae324e3e6b6a4d3ba213b28871ff8c2f7902eb22a6c7b7b34ce8636cd6"
   end
 
   depends_on "protobuf" => :build
