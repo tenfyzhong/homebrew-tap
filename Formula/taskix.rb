@@ -28,7 +28,27 @@ class Taskix < Formula
     fish_completion.install "completions/taskix.fish"
   end
 
+  def caveats
+    <<~EOS
+      Before using Taskix, copy the example configuration if you do not have one:
+        mkdir -p ~/.config/taskix
+        cp -n #{pkgshare}/taskix.example.toml ~/.config/taskix/config.toml
+
+      Then edit ~/.config/taskix/config.toml for your Obsidian vault.
+      When upgrading, keep your existing configuration and review the example
+      for new settings.
+
+      After configuring Taskix, run these commands after installation or upgrade:
+        taskix obsidian setup
+        taskix sync
+    EOS
+  end
+
   test do
+    assert_match "cp -n #{pkgshare}/taskix.example.toml ~/.config/taskix/config.toml", caveats
+    assert_match "Then edit ~/.config/taskix/config.toml", caveats
+    assert_match(/taskix obsidian setup\s+taskix sync/, caveats)
+
     assert_path_exists bash_completion/"taskix"
     assert_path_exists zsh_completion/"_taskix"
     assert_path_exists fish_completion/"taskix.fish"
