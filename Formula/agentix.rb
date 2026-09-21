@@ -4,6 +4,7 @@ class Agentix < Formula
   url "https://github.com/tenfyzhong/agentix/archive/refs/tags/0.4.9.tar.gz"
   sha256 "ae35222f79c022d6f97da3eef61a2d997a1974514b4f24b107d0d2fef1fc017f"
   license "MIT"
+  head "https://github.com/tenfyzhong/agentix.git", branch: "main"
 
   bottle do
     root_url "https://github.com/tenfyzhong/agentix/releases/download/0.4.9"
@@ -16,7 +17,7 @@ class Agentix < Formula
   depends_on "rust" => :build
 
   def install
-    system "bash", ".github/scripts/set-release-version.sh", version.to_s
+    system "bash", ".github/scripts/set-release-version.sh", version.to_s unless build.head?
     system "cargo", "install", *std_cargo_args(path: "crates/agentix")
     pkgshare.install "config/agentix.example.toml"
 
@@ -44,10 +45,13 @@ class Agentix < Formula
   end
 
   test do
+    assert_equal "https://github.com/tenfyzhong/agentix.git", head&.url
+    assert_equal "main", head.specs[:branch]
     assert_path_exists bash_completion/"agentix"
     assert_path_exists zsh_completion/"_agentix"
     assert_path_exists fish_completion/"agentix.fish"
     assert_path_exists pkgshare/"agentix.example.toml"
-    assert_match version.to_s, shell_output("#{bin}/agentix --version")
+    assert_match "agentix ", shell_output("#{bin}/agentix --version")
+    assert_match version.to_s, shell_output("#{bin}/agentix --version") unless build.head?
   end
 end

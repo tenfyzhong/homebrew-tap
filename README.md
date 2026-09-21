@@ -18,6 +18,54 @@ brew tap tenfyzhong/tap
 brew install tenfyzhong/tap/taskix
 ```
 
+### Development versions
+
+Agentix and Taskix support building the latest `main` branch from source:
+
+```sh
+brew install --HEAD tenfyzhong/tap/agentix
+brew install --HEAD tenfyzhong/tap/taskix
+```
+
+If a stable version is already installed, unlink that formula first, for example:
+
+```sh
+brew unlink taskix
+brew install --HEAD tenfyzhong/tap/taskix
+```
+
+Use the same sequence with `agentix` to switch Agentix. Unlinking preserves the
+installed stable version and your configuration.
+
+To keep the stable command linked while compiling HEAD, install with
+`--skip-link`, then switch after a successful build:
+
+```sh
+brew install --HEAD --skip-link tenfyzhong/tap/taskix
+brew unlink taskix
+brew link --HEAD taskix
+```
+
+`--skip-link` skips links in Homebrew's prefix, but Homebrew can still update the
+formula's `opt` link. Services or scripts using that path may pick up HEAD on
+their next start.
+
+HEAD builds require Rust;
+Agentix also requires Protobuf. Homebrew installs these build dependencies.
+
+To update an installed HEAD build to the latest `main` commit:
+
+```sh
+brew upgrade --fetch-HEAD tenfyzhong/tap/agentix tenfyzhong/tap/taskix
+```
+
+Include only the formulae you installed as HEAD. If Agentix is running as a
+Homebrew service, restart it after switching or upgrading:
+
+```sh
+brew services restart tenfyzhong/tap/agentix
+```
+
 ## Available tools
 
 | Formula | Description | Project |
@@ -65,9 +113,9 @@ To see the options for configuring task storage and document output, run:
 taskix init --help
 ```
 
-To build the development version from the Agentix `main` branch instead, use
-`brew install --HEAD tenfyzhong/tap/taskix`. This builds from source with Rust as
-a build dependency.
+To build from the Agentix `main` branch instead, follow
+[Development versions](#development-versions), including the unlink step if the
+stable version is already installed.
 
 ### Other tools
 
