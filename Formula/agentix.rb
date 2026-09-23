@@ -29,6 +29,8 @@ class Agentix < Formula
   service do
     run [opt_bin/"agentix", "serve"]
     keep_alive true
+    # Allow Agentix to drain work and reap its owned Codex process group.
+    stop_timeout 30
     log_path var/"log/agentix.log"
     error_log_path var/"log/agentix.err.log"
   end
