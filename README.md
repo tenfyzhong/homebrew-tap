@@ -117,6 +117,38 @@ To build from the Agentix `main` branch instead, follow
 [Development versions](#development-versions), including the unlink step if the
 stable version is already installed.
 
+#### Memory service
+
+The Taskix service runs `taskix memory serve`. Release 0.4.12 does not include
+memory; use a HEAD build until a newer release is available. Configure `[memory]`
+in `~/.config/taskix/config.toml`, including `enabled = true` and your model
+provider, before starting it:
+
+```sh
+brew services start tenfyzhong/tap/taskix
+```
+
+The formula starts Taskix directly. On macOS/Linux, memory-capable builds with
+login-environment support run the user's account login shell with `-lc`, capture
+its exported environment and replace the service process with the same PID.
+Failed or timed-out lookups retain the inherited environment. The formula does
+not require Fish; if Fish is your login shell, export API keys and proxy variables
+with `set -gx` outside `status is-interactive` guards in your Fish configuration.
+Variables set only in a terminal session are not loaded by a new service process.
+`TASKIX_LOGIN_SHELL` can select a different absolute shell path when supplied to
+the service process. This code change must be included in the installed build.
+
+After changing Fish variables or upgrading Taskix, restart and check the service:
+
+```sh
+brew services restart tenfyzhong/tap/taskix
+taskix memory status
+```
+
+Logs are written to `$(brew --prefix)/var/log/taskix.log` and
+`$(brew --prefix)/var/log/taskix.err.log`. Stop any separately started
+`taskix memory serve` process before switching to the Homebrew service.
+
 ### Other tools
 
 Check a formula's dependencies and post-installation instructions with
