@@ -28,6 +28,14 @@ class Taskix < Formula
     fish_completion.install "completions/taskix.fish"
   end
 
+  service do
+    run [opt_bin/"taskix", "memory", "serve"]
+    keep_alive true
+    stop_timeout 30
+    log_path var/"log/taskix.log"
+    error_log_path var/"log/taskix.err.log"
+  end
+
   def caveats
     <<~EOS
       Before using Taskix, copy the example configuration if you do not have one:
@@ -41,13 +49,25 @@ class Taskix < Formula
       After configuring Taskix, run these commands after installation or upgrade:
         taskix obsidian setup
         taskix sync
+
+      With a memory-capable build, configure [memory] and set enabled = true,
+      then start the memory service:
+        brew services start tenfyzhong/tap/taskix
+
+      On macOS/Linux, Taskix loads exported variables from your login shell.
+      If your login shell is fish, put service variables outside any
+      `status is-interactive` guard, then restart after changing them.
+      Release 0.4.12 does not include memory; use --HEAD until a newer release.
     EOS
   end
 
   test do
+    assert_equal [opt_bin/"taskix", "memory", "serve"].map(&:to_s), service.command
+
     assert_match "cp -n #{pkgshare}/taskix.example.toml ~/.config/taskix/config.toml", caveats
     assert_match "Then edit ~/.config/taskix/config.toml", caveats
     assert_match(/taskix obsidian setup\s+taskix sync/, caveats)
+    assert_match "brew services start tenfyzhong/tap/taskix", caveats
 
     assert_path_exists bash_completion/"taskix"
     assert_path_exists zsh_completion/"_taskix"
