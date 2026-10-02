@@ -173,74 +173,80 @@ brew upgrade tenfyzhong/tap/agentix tenfyzhong/tap/taskix
 
 Replace the formula names with those you have installed.
 
-## Building from local Agentix source
+## Installing local Agentix binaries
 
-The formulae can build a local Agentix checkout directly through Homebrew:
+Build the Agentix checkout first using its normal toolchain:
 
 ```sh
-brew tap tenfyzhong/tap
-env HOMEBREW_AGENTIX_LOCAL_SOURCE=/absolute/path/to/agentix \
-  brew install --build-from-source tenfyzhong/tap/agentix tenfyzhong/tap/taskix
+cd /absolute/path/to/agentix
+make release
 ```
 
-When either CLI is already installed, use `reinstall` to rebuild and switch the
-installed commands to the local source, regardless of the upstream version:
+The Formulae can install those existing binaries directly from any directory:
 
 ```sh
 env HOMEBREW_AGENTIX_LOCAL_SOURCE=/absolute/path/to/agentix \
   brew reinstall --build-from-source tenfyzhong/tap/agentix tenfyzhong/tap/taskix
 ```
 
-These commands work from the tap repository or any other directory. No Agentix
-Makefile, precompiled binary, installer script or manually generated manifest
-is needed. Select only one formula if desired. The tap must contain this local
-source support before using the environment variable.
+Select only one Formula if desired. The tap must contain precompiled local
+installation support. `--build-from-source` makes Homebrew run the Formula
+installation recipe for the local archive; the local recipe copies binaries
+and does not invoke Cargo or install Rust/LLVM or Protobuf build dependencies.
+Stable/remote HEAD source builds retain their existing build dependencies.
 
-`HOMEBREW_AGENTIX_LOCAL_PROFILE` defaults to `release`; set it to `debug` for an
-unoptimized local build. Local builds enable all Cargo features. Homebrew
-installs the normal Rust/Protobuf build dependencies and builds the binaries
-inside its sandbox using the same Formula installation, resource and service
-rules as upstream builds. The source checkout and Formula files stay untouched.
+`HOMEBREW_AGENTIX_LOCAL_PROFILE` defaults to `release`. Build with `make`, then
+set it to `debug` to install existing debug binaries. The binaries must be
+executable and built for the current machine. Their enabled features and Cargo
+version come from the earlier build; rebuild explicitly after changing source.
+Missing binaries or resources fail before installation with an actionable error.
 
-The Formula creates a checksummed source archive in Homebrew's cache. It includes
-tracked files with their current modifications and nonignored untracked files;
-Git metadata, `target` and `node_modules` are excluded. Without a Git repository,
-it includes regular files and symlinks except those directories. Keep the source
-tree unchanged during installation. Symlinks are preserved, so source dependencies
-must be available inside the resulting snapshot.
-
-Each source/profile snapshot has a content-derived
-`0.0.0-local.<digest>.<profile>` Cellar version. The executable retains its source
-Cargo version. Installed metadata includes the helper and snapshot record, so
-it can be read after removing the checkout. Homebrew owns rebuilding, keg
-replacement, dependency handling and command linking; `reinstall` replaces the
-active keg and uses Homebrew's normal failure recovery. Services are not restarted.
-
-For debug builds:
+By default, binaries are read from `target/<profile>/` in the checkout. For a
+custom Cargo target directory, set `HOMEBREW_AGENTIX_LOCAL_TARGET_DIR` to that
+same directory. Relative paths are resolved against the checkout. Example:
 
 ```sh
+cd /absolute/path/to/agentix
+make release CARGO_TARGET_DIR=/absolute/path/to/build
+
 env HOMEBREW_AGENTIX_LOCAL_SOURCE=/absolute/path/to/agentix \
-  HOMEBREW_AGENTIX_LOCAL_PROFILE=debug \
+  HOMEBREW_AGENTIX_LOCAL_TARGET_DIR=/absolute/path/to/build \
   brew reinstall --build-from-source tenfyzhong/tap/agentix
 ```
 
-The Agentix Makefile wraps this same source-build operation as
-`make install-local`, supporting `PROFILE=release|debug` and selected `FORMULAE`.
-To return to the upstream release, run `brew reinstall` without the local-source
-variable. For remote HEAD, run `brew reinstall --HEAD` without it. Use the local
-source mode without `--HEAD`. Restart only the service you want to use afterwards.
+The helper snapshots each selected binary and its example configuration and
+Bash/Zsh/Fish completions into a checksummed archive in Homebrew's cache. Source
+files and other build outputs are excluded; configuration and completion edits
+are included. Files are copied into the snapshot, including symlink targets,
+so installation does not depend on paths outside that archive. Keep the inputs
+unchanged while the snapshot is created. The checkout and Formula files stay
+untouched.
 
-### Local source tests
+Each artifact/profile snapshot uses a content-derived
+`0.0.0-local.<digest>.<profile>` Cellar version. Installed metadata includes the
+helper and snapshot record, so it remains readable after removing the checkout.
+Homebrew owns keg replacement, command linking and normal failure recovery.
+Services are not restarted automatically.
+
+The Agentix Makefile wraps this operation as `make update VERSION=local`, with
+`PROFILE=release|debug`, `FORMULAE=agentix|taskix` and `CARGO_TARGET_DIR` support.
+`make switch VERSION=local` selects an already installed local build without
+building or installing. To return to an upstream release or remote HEAD, unset
+the local variables and run `brew reinstall` or `brew reinstall --HEAD`, or use
+the Agentix Makefile's stable/HEAD update and switch targets.
+
+### Local installation tests
 
 ```sh
 node --test tests/*.test.mjs
 AGENTIX_TEST_HOMEBREW=1 node --test tests/local-install.test.mjs
 ```
 
-The normal suite checks native Formula source snapshots, dirty/untracked files,
-ignored build output, profile selection and installed metadata. The opt-in test
-builds a uniquely named Rust workspace through the actual Formula recipe,
-reinstalls over an existing keg with different dirty source in release/debug,
-checks command and `opt` links and resources, and loads installed metadata after
+The normal suite checks artifact snapshots, content identity, missing inputs,
+profile/target selection, dependency declarations, Formula installation and
+installed metadata. The opt-in test builds a uniquely named Rust fixture outside
+Homebrew, installs release/debug artifacts through the actual Formula recipe
+with its dependency declarations intact, verifies no build dependencies and
+byte-for-byte binary reuse, checks links/resources and loads metadata after
 removing the checkout. It removes its fixture kegs and tap afterwards and never
 starts Agentix or Taskix services.

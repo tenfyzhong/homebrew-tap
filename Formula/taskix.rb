@@ -21,13 +21,18 @@ class Taskix < Formula
     sha256 cellar: :any_skip_relocation, x86_64_linux:  "785b4f1553489a4d681df340ff5fa041073d9881e3ed1a949acf2fcef3637e5a"
   end
 
-  depends_on "rust" => :build
+  unless AgentixLocalBuild.active?("taskix", __dir__)
+    depends_on "rust" => :build
+  end
 
   def install
     local_build = AgentixLocalBuild.active?("taskix", __dir__)
-    system "bash", ".github/scripts/set-release-version.sh", version.to_s if !build.head? && !local_build
-    cargo_args = AgentixLocalBuild.cargo_args("taskix", __dir__)
-    system "cargo", "install", *std_cargo_args(path: "crates/taskix"), *cargo_args
+    if local_build
+      bin.install "bin/taskix"
+    else
+      system "bash", ".github/scripts/set-release-version.sh", version.to_s unless build.head?
+      system "cargo", "install", *std_cargo_args(path: "crates/taskix")
+    end
     AgentixLocalBuild.install(self, "taskix", __dir__)
     pkgshare.install "config/taskix.example.toml"
 
