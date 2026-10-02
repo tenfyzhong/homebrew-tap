@@ -6,7 +6,6 @@ require "json"
 require "rubygems/package"
 require "tempfile"
 require "uri"
-require "zlib"
 
 # Native Formula support for installing local precompiled binaries.
 module AgentixLocalBuild
@@ -55,18 +54,22 @@ module AgentixLocalBuild
     FileUtils.mkdir_p(cache)
     ENV["SOURCE_DATE_EPOCH"] = "0"
     Tempfile.create(["artifacts-", ".tar.gz"], cache) do |file|
-      gzip = Zlib::GzipWriter.new(file)
-      gzip.mtime = 0
-      Gem::Package::TarWriter.new(gzip) do |tar|
-        files.sort.each do |path, full|
-          tar.add_file_simple(path, File.stat(full).mode, File.size(full)) do |entry|
-            File.open(full, "rb") do |input|
-              IO.copy_stream(input, entry)
+      Tempfile.create(["artifacts-", ".tar"], cache) do |uncompressed|
+        Gem::Package::TarWriter.new(uncompressed) do |tar|
+          files.sort.each do |path, full|
+            tar.add_file_simple(path, File.stat(full).mode, File.size(full)) do |entry|
+              File.open(full, "rb") do |input|
+                IO.copy_stream(input, entry)
+              end
             end
           end
         end
+        uncompressed.flush
+        # Use the platform gzip to avoid Ruby GzipWriter buffer errors on release binaries.
+        unless system("gzip", "-n", "-c", uncompressed.path, out: file)
+          raise "Failed to compress local artifact snapshot with gzip"
+        end
       end
-      gzip.finish
       file.flush
       digest = Digest::SHA256.file(file.path).hexdigest
       version = "0.0.0-local.#{digest[0, 16]}.#{profile}"

@@ -52,6 +52,11 @@ jobs:
           cd "$(brew --repository tenfyzhong/tap)"
           node --test tests/*.test.mjs
 
+      - name: Test large snapshots with Homebrew Ruby
+        run: |
+          cd "$(brew --repository tenfyzhong/tap)"
+          AGENTIX_TEST_HOMEBREW=1 node --test --test-name-pattern=homebrew_formula_loading tests/local-build.test.mjs
+
       - run: brew test-bot --only-formulae-detect --tap=tenfyzhong/tap
         id: formulae-detect
 
