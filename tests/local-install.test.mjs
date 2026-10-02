@@ -8,18 +8,17 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
-test("real_homebrew_builds_local_dirty_source_with_native_reinstall", {
+test("real_homebrew_installs_prebuilt_local_binaries_without_build_dependencies", {
     skip: process.env.AGENTIX_TEST_HOMEBREW !== "1", timeout: 300_000,
 }, async () => {
-    const dir = await mkdtemp(join(tmpdir(), "brew-source-acceptance-"));
+    const dir = await mkdtemp(join(tmpdir(), "brew-artifact-acceptance-"));
     const source = join(dir, "local source");
     const name = `agentix-source-fixture-${process.pid}`;
     const tap = `codex-fixture/source-${process.pid}`;
-    const env = {...process.env, HOMEBREW_NO_AUTO_UPDATE: "1", HOMEBREW_NO_INSTALL_CLEANUP: "1", HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK: "1", HOMEBREW_AGENTIX_LOCAL_SOURCE: ""};
+    const env = {...process.env, HOMEBREW_NO_AUTO_UPDATE: "1", HOMEBREW_NO_INSTALL_CLEANUP: "1", HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK: "1", HOMEBREW_AGENTIX_LOCAL_SOURCE: "", HOMEBREW_AGENTIX_LOCAL_TARGET_DIR: ""};
     const brew = (args, extra = {}) => execFileSync("brew", args, {env: {...env, ...extra}, encoding: "utf8", timeout: 90_000, killSignal: "SIGKILL"});
     let tapPath;
     const snapshots = new Set();
-    const cargo = execFileSync("which", ["cargo"], {encoding: "utf8"}).trim();
     try {
         tapPath = brew(["--repository", tap]).trim();
         await mkdir(join(tapPath, "Formula"), {recursive: true});
@@ -46,21 +45,23 @@ test("real_homebrew_builds_local_dirty_source_with_native_reinstall", {
             .replaceAll(`${name}_local_build.rb`, "agentix_local_build.rb")
             .replace(/  url "[^"\n]+"/, `  url "file://${archive}"`)
             .replace(/  sha256 "[a-f0-9]+"/, `  sha256 "${checksum}"`)
-            .replace(/  bottle do\n.*?  end\n/s, "")
-            .replace(/  depends_on "(?:protobuf|rust)".*\n/g, "")
-            .replace('system "cargo", "install"', `ENV["RUSTC"] = ${JSON.stringify(join(cargo, "..", "rustc"))}\n    system ${JSON.stringify(cargo)}, "install"`);
+            .replace(/  bottle do\n.*?  end\n/s, "");
         const formulaPath = join(tapPath, "Formula", `${name}.rb`);
-        await writeFile(formulaPath, formula.replace(/    system "bash".*\n/, ""));
+        await writeFile(formulaPath, formula);
         brew(["trust", tap]);
-        brew(["reinstall", "--build-from-source", `${tap}/${name}`]);
         const prefix = brew(["--prefix"]).trim();
         const command = join(prefix, "bin", name);
-        assert.equal(execFileSync(command, ["--version"], {encoding: "utf8"}).trim(), `${name} 1.2.3`);
-        await writeFile(formulaPath, formula);
         for (const [iteration, profile] of [[1, "release"], [2, "release"], [3, "debug"]]) {
             const text = `fn main() { println!("${name} dirty-${iteration}-{}", if cfg!(debug_assertions) { "debug" } else { "release" }); }\n`;
             await writeFile(main, text);
             const local = {HOMEBREW_AGENTIX_LOCAL_SOURCE: source, HOMEBREW_AGENTIX_LOCAL_PROFILE: profile};
+            // Compile outside Homebrew, exactly as make release/make does.
+            execFileSync("cargo", ["build", "--manifest-path", join(source, "Cargo.toml"), ...(profile === "release" ? ["--release"] : [])]);
+            const binary = join(source, "target", profile, name);
+            const expectedBinary = await readFile(binary);
+            const deps = JSON.parse(brew(["info", "--json=v2", `${tap}/${name}`], local)).formulae[0];
+            assert.deepEqual(deps.build_dependencies, []);
+            assert.deepEqual(deps.dependencies, []);
             brew(["reinstall", "--build-from-source", `${tap}/${name}`], local);
             assert.equal(execFileSync(command, ["--version"], {encoding: "utf8"}).trim(), `${name} dirty-${iteration}-${profile}`);
             assert.equal(await readFile(main, "utf8"), text);
@@ -68,6 +69,7 @@ test("real_homebrew_builds_local_dirty_source_with_native_reinstall", {
             const keg = await realpath(join(prefix, "opt", name));
             assert.match(keg, new RegExp(`0\\.0\\.0-local\\..*\\.${profile}$`));
             assert.equal(await realpath(command), join(keg, "bin", name));
+            assert.deepEqual(await readFile(command), expectedBinary);
             assert.equal(await readFile(join(keg, "share", name, `${name}.example.toml`), "utf8"), "fixture = true\n");
             const record = JSON.parse(await readFile(join(keg, "share", name, "agentix-local.json"), "utf8"));
             assert.equal(record.profile, profile);

@@ -18,14 +18,19 @@ class Agentix < Formula
     sha256 cellar: :any_skip_relocation, x86_64_linux:  "9048c1442c0a12196e17aa20e6da69cdd7e134afa9a9ea1bba633d88ab21dc97"
   end
 
-  depends_on "protobuf" => :build
-  depends_on "rust" => :build
+  unless AgentixLocalBuild.active?("agentix", __dir__)
+    depends_on "protobuf" => :build
+    depends_on "rust" => :build
+  end
 
   def install
     local_build = AgentixLocalBuild.active?("agentix", __dir__)
-    system "bash", ".github/scripts/set-release-version.sh", version.to_s if !build.head? && !local_build
-    cargo_args = AgentixLocalBuild.cargo_args("agentix", __dir__)
-    system "cargo", "install", *std_cargo_args(path: "crates/agentix"), *cargo_args
+    if local_build
+      bin.install "bin/agentix"
+    else
+      system "bash", ".github/scripts/set-release-version.sh", version.to_s unless build.head?
+      system "cargo", "install", *std_cargo_args(path: "crates/agentix")
+    end
     AgentixLocalBuild.install(self, "agentix", __dir__)
     pkgshare.install "config/agentix.example.toml"
 
