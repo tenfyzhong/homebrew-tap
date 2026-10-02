@@ -256,6 +256,12 @@ so installation does not depend on paths outside that archive. Keep the inputs
 unchanged while the snapshot is created. The checkout and Formula files stay
 untouched.
 
+Snapshots are written to a temporary tar file and compressed with the platform
+`gzip -n`, avoiding Ruby `GzipWriter` buffer errors on large release binaries.
+Temporary disk space must accommodate both the tar and its compressed archive.
+Changing the compressor can produce a new local version for identical inputs;
+repeat updates with the same inputs and compressor retain the same identity.
+
 Each artifact/profile snapshot uses a content-derived
 `0.0.0-local.<digest>.<profile>` Cellar version. Installed metadata includes the
 helper and snapshot record, so it remains readable after removing the checkout.
@@ -275,12 +281,20 @@ the Agentix Makefile's stable/HEAD update and switch targets.
 
 ```sh
 node --test tests/*.test.mjs
+AGENTIX_TEST_HOMEBREW=1 node --test --test-name-pattern=homebrew_formula_loading tests/local-build.test.mjs
 AGENTIX_TEST_HOMEBREW=1 node --test tests/local-install.test.mjs
 ```
 
 The normal suite checks artifact snapshots, content identity, missing inputs,
 profile/target selection, dependency declarations, Formula installation and
-installed metadata. The opt-in test builds a uniquely named Rust fixture outside
+installed metadata, large-file integrity and compression failure cleanup. CI
+also loads a 40 MiB fixture through Homebrew Ruby. To verify an existing binary,
+set `AGENTIX_TEST_BINARY=/absolute/path/to/target/release/agentix` and run the
+`supplied_release` or `homebrew_formula_loading` test by name. Set
+`AGENTIX_TEST_SOURCE=/absolute/path/to/agentix` and run `existing_local_formulae`
+to check the installed tap against both release binaries without installing or
+linking them. `AGENTIX_TEST_RUBY=/absolute/path/to/ruby` selects the unit-test
+runtime. The opt-in installation test builds a uniquely named Rust fixture outside
 Homebrew, installs release/debug artifacts through the actual Formula recipe
 starting with stable and HEAD kegs whose `opt` and command links diverge, with
 its dependency declarations intact,

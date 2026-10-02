@@ -1,13 +1,24 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { chmod, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { chmod, mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { execFileSync, spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
-const helper = join(root, "lib/agentix_local_build.rb");
+const helper = process.env.AGENTIX_TEST_HELPER || join(root, "lib/agentix_local_build.rb");
+const ruby = process.env.AGENTIX_TEST_RUBY || "ruby";
+const rubyArgs = ruby === "brew" ? ["ruby"] : [];
+test("existing_local_formulae_load_with_precompiled_release_artifacts", {
+    skip: !process.env.AGENTIX_TEST_SOURCE,
+}, () => {
+    for (const name of ["taskix", "agentix"]) {
+        const result = spawnSync("brew", ["ruby", "-e", `require "formulary"; puts Formulary.factory("tenfyzhong/tap/${name}", :stable).pkg_version`], {encoding: "utf8", env: {...process.env, HOMEBREW_AGENTIX_LOCAL_SOURCE: process.env.AGENTIX_TEST_SOURCE, HOMEBREW_AGENTIX_LOCAL_PROFILE: "release", HOMEBREW_NO_AUTO_UPDATE: "1"}, timeout: 90_000});
+        assert.equal(result.status, 0, result.stderr);
+        assert.match(result.stdout.trim(), /^0\.0\.0-local\..*\.release$/);
+    }
+});
 const script = `require "json"
 require ARGV.shift
 class Spec
@@ -38,7 +49,7 @@ async function fixture(t) {
         for (const path of [`config/${name}.example.toml`, `completions/${name}.bash`, `completions/_${name}`, `completions/${name}.fish`]) await writeFile(join(source, path), "# fixture\n");
     }
     const env = (sourcePath = source, profile = "release", target = "") => ({...process.env, HOMEBREW_AGENTIX_LOCAL_SOURCE: sourcePath, HOMEBREW_AGENTIX_LOCAL_PROFILE: profile, HOMEBREW_AGENTIX_LOCAL_TARGET_DIR: target, HOMEBREW_CACHE: join(dir, "cache")});
-    const run = (sourcePath = source, profile = "release", formulaDir = join(dir, "Formula"), target = "") => spawnSync("ruby", ["-e", script, helper, formulaDir], {encoding: "utf8", env: env(sourcePath, profile, target)});
+    const run = (sourcePath = source, profile = "release", formulaDir = join(dir, "Formula"), target = "") => spawnSync(ruby, [...rubyArgs, "-e", script, helper, formulaDir], {encoding: "utf8", env: env(sourcePath, profile, target)});
     return {dir, source, run, env};
 }
 
@@ -55,6 +66,85 @@ test("formula_snapshots_selected_prebuilt_binary_and_resources", async t => {
     assert.equal(await readFile(join(unpack, "config/agentix.example.toml"), "utf8"), "# fixture\n");
     const listing = execFileSync("tar", ["-tzf", fileURLToPath(data.spec.url)], {encoding: "utf8"});
     assert.doesNotMatch(listing, /target\/|modified\.rs|Cargo.toml|taskix/);
+});
+
+function largeBinary() {
+    const binary = Buffer.alloc(40 * 1024 * 1024 + 17);
+    let state = 0x12345678;
+    for (let i = 0; i < binary.length; i++) {
+        state ^= state << 13;
+        state ^= state >>> 17;
+        state ^= state << 5;
+        binary[i] = i % 4 === 3 ? 0x94 : state & 0xff;
+    }
+    return binary;
+}
+
+test("large_binary_snapshot_preserves_bytes_and_reproducible_identity", async t => {
+    const f = await fixture(t);
+    const binary = largeBinary();
+    await writeFile(join(f.source, "target/release/agentix"), binary);
+    const result = f.run();
+    assert.equal(result.status, 0, result.stderr);
+    const data = JSON.parse(result.stdout);
+    const unpack = join(f.dir, "unpack");
+    await mkdir(unpack);
+    execFileSync("tar", ["-xzf", fileURLToPath(data.spec.url), "-C", unpack]);
+    assert.deepEqual(await readFile(join(unpack, "bin/agentix")), binary);
+    const again = f.run();
+    assert.equal(again.status, 0, again.stderr);
+    assert.deepEqual(JSON.parse(again.stdout), data);
+});
+
+test("compression_failure_cleans_temporary_files_and_restores_epoch", async t => {
+    const f = await fixture(t);
+    const bin = join(f.dir, "bin");
+    await mkdir(bin);
+    const gzip = join(bin, "gzip");
+    await writeFile(gzip, "#!/bin/sh\nexit 7\n");
+    await chmod(gzip, 0o755);
+    const result = spawnSync(ruby, [...rubyArgs, "-e", 'require ARGV.shift; begin; AgentixLocalBuild.snapshot("agentix", "."); rescue => e; puts JSON.generate({error: e.message, epoch: ENV["SOURCE_DATE_EPOCH"]}); end', helper], {encoding: "utf8", env: {...f.env(), PATH: `${bin}:${process.env.PATH}`, SOURCE_DATE_EPOCH: "123"}});
+    assert.equal(result.status, 0, result.stderr);
+    assert.deepEqual(JSON.parse(result.stdout), {error: "Failed to compress local artifact snapshot with gzip", epoch: "123"});
+    assert.deepEqual(await readdir(join(f.dir, "cache", "agentix-local-artifacts")), []);
+});
+
+test("supplied_release_binary_snapshots_under_homebrew_runtime", {
+    skip: !process.env.AGENTIX_TEST_BINARY,
+}, async t => {
+    const f = await fixture(t);
+    const binary = await readFile(process.env.AGENTIX_TEST_BINARY);
+    await writeFile(join(f.source, "target/release/agentix"), binary);
+    const result = spawnSync("brew", ["ruby", "-e", 'require ARGV.shift; 10.times { AgentixLocalBuild.instance_variable_set(:@snapshots, {}); puts JSON.generate({spec: AgentixLocalBuild.snapshot("agentix", ".")}) }', helper], {encoding: "utf8", env: {...f.env(), HOMEBREW_NO_AUTO_UPDATE: "1", HOMEBREW_NO_INSTALL_FROM_API: "1"}, timeout: 90_000});
+    assert.equal(result.status, 0, result.stderr);
+    const data = JSON.parse(result.stdout.trim().split("\n").at(-1));
+    const unpack = join(f.dir, "unpack");
+    await mkdir(unpack);
+    execFileSync("tar", ["-xzf", fileURLToPath(data.spec.url), "-C", unpack]);
+    assert.deepEqual(await readFile(join(unpack, "bin/agentix")), binary);
+});
+
+test("homebrew_formula_loading_snapshots_release_binary", {
+    skip: process.env.AGENTIX_TEST_HOMEBREW !== "1",
+}, async t => {
+    const f = await fixture(t);
+    await writeFile(join(f.source, "target/release/agentix"), process.env.AGENTIX_TEST_BINARY ? await readFile(process.env.AGENTIX_TEST_BINARY) : largeBinary());
+    const tap = `codex-fixture/snapshot-${process.pid}`;
+    const tapPath = execFileSync("brew", ["--repository", tap], {encoding: "utf8"}).trim();
+    await mkdir(join(tapPath, "Formula"), {recursive: true});
+    t.after(() => rm(tapPath, {recursive: true, force: true}));
+    execFileSync("git", ["init", "--quiet", "--initial-branch=test/snapshot", tapPath]);
+    execFileSync("brew", ["trust", tap], {env: {...process.env, HOMEBREW_NO_AUTO_UPDATE: "1"}});
+    const formula = join(tapPath, "Formula", "agentix.rb");
+    await writeFile(formula, `require ${JSON.stringify(helper)}\nclass Agentix < Formula\n  desc "Snapshot fixture"\n  homepage "https://example.invalid"\n  url "https://example.invalid/agentix-1.2.3.tar.gz"\n  sha256 "${"0".repeat(64)}"\n  AgentixLocalBuild.configure(self, "agentix", __dir__)\nend\n`);
+    const result = spawnSync("brew", ["ruby", "-e", 'require "formulary"; 2.times { Formulary.clear_cache; AgentixLocalBuild.instance_variable_set(:@snapshots, {}) if defined?(AgentixLocalBuild); f = Formulary.factory(Pathname(ARGV[0]), :stable); puts JSON.generate({url: f.stable.url, version: f.pkg_version.to_s}) }', formula], {encoding: "utf8", env: {...f.env(), HOMEBREW_NO_INSTALL_FROM_API: "1", HOMEBREW_NO_AUTO_UPDATE: "1"}, timeout: 90_000});
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(new Set(result.stdout.trim().split("\n")).size, 1);
+    const data = JSON.parse(result.stdout.trim().split("\n").at(-1));
+    const unpack = join(f.dir, "unpack");
+    await mkdir(unpack);
+    execFileSync("tar", ["-xzf", fileURLToPath(data.url), "-C", unpack]);
+    assert.deepEqual(await readFile(join(unpack, "bin/agentix")), await readFile(join(f.source, "target/release/agentix")));
 });
 
 test("artifact_identity_changes_with_binary_or_resource_but_not_uncompiled_source", async t => {
