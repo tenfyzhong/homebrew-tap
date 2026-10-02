@@ -186,7 +186,7 @@ The Formulae can install those existing binaries directly from any directory:
 
 ```sh
 env HOMEBREW_AGENTIX_LOCAL_SOURCE=/absolute/path/to/agentix \
-  brew reinstall --build-from-source tenfyzhong/tap/agentix tenfyzhong/tap/taskix
+  brew install --build-from-source --skip-link tenfyzhong/tap/agentix tenfyzhong/tap/taskix
 ```
 
 Select only one Formula if desired. The tap must contain precompiled local
@@ -194,8 +194,40 @@ installation support. `--build-from-source` makes Homebrew run the Formula
 installation recipe for the local archive; the local recipe copies binaries
 and does not invoke Cargo or install Rust/LLVM or Protobuf build dependencies.
 Stable/remote HEAD source builds retain their existing build dependencies.
+
+Then link the exact installed snapshot through Homebrew. Use the same local
+source/profile/target settings and selected Formulae in both commands:
+
+```sh
+env HOMEBREW_AGENTIX_LOCAL_SOURCE=/absolute/path/to/agentix \
+  brew ruby -e '
+    require "formulary"
+    require "unlink"
+    kegs = ARGV.map do |name|
+      formula = Formulary.factory(name, :stable)
+      abort "Not installed: #{formula.prefix}" unless formula.prefix.directory?
+      Keg.new(formula.prefix)
+    end
+    kegs.each do |keg|
+      ref = HOMEBREW_LINKED_KEGS/keg.name
+      Homebrew::Unlink.unlink(Keg.new(ref.realpath)) if ref.symlink?
+    end
+    kegs.each { |keg| keg.lock { keg.link } }
+  ' tenfyzhong/tap/agentix tenfyzhong/tap/taskix
+```
+
+`--skip-link` separates installation from command linking. It avoids conflicts
+when another version remains linked while `opt` points elsewhere. Plain
+`brew unlink <formula>` follows `opt` and can miss the actual linked keg; plain
+`brew link <formula>` can select a higher stable version instead of local.
+The explicit link step validates every selected snapshot before unlinking the
+actual linked kegs. Keep binary/resource inputs unchanged between the two steps.
+An install failure should stop the flow before linking. Homebrew can still move
+`opt` during staging. Existing stable/HEAD kegs are retained; identical artifacts
+can be reused without reinstalling.
+
 While local mode is active, the Formula exposes only the local artifact spec,
-so `reinstall` uses that archive even when a remote HEAD version is installed.
+so local installation uses that archive even when a remote HEAD version is installed.
 
 `HOMEBREW_AGENTIX_LOCAL_PROFILE` defaults to `release`. Build with `make`, then
 set it to `debug` to install existing debug binaries. The binaries must be
@@ -213,7 +245,7 @@ make release CARGO_TARGET_DIR=/absolute/path/to/build
 
 env HOMEBREW_AGENTIX_LOCAL_SOURCE=/absolute/path/to/agentix \
   HOMEBREW_AGENTIX_LOCAL_TARGET_DIR=/absolute/path/to/build \
-  brew reinstall --build-from-source tenfyzhong/tap/agentix
+  brew install --build-from-source --skip-link tenfyzhong/tap/agentix
 ```
 
 The helper snapshots each selected binary and its example configuration and
@@ -227,11 +259,13 @@ untouched.
 Each artifact/profile snapshot uses a content-derived
 `0.0.0-local.<digest>.<profile>` Cellar version. Installed metadata includes the
 helper and snapshot record, so it remains readable after removing the checkout.
-Homebrew owns keg replacement, command linking and normal failure recovery.
+Homebrew owns the installed kegs; linking selects the exact installed snapshot.
 Services are not restarted automatically.
 
 The Agentix Makefile wraps this operation as `make update VERSION=local`, with
 `PROFILE=release|debug`, `FORMULAE=agentix|taskix` and `CARGO_TARGET_DIR` support.
+It runs the same install with `--skip-link`, then its exact local switch only
+after all selected installations succeed.
 `make switch VERSION=local` selects an already installed local build without
 building or installing. To return to an upstream release or remote HEAD, unset
 the local variables and run `brew reinstall` or `brew reinstall --HEAD`, or use
@@ -248,7 +282,8 @@ The normal suite checks artifact snapshots, content identity, missing inputs,
 profile/target selection, dependency declarations, Formula installation and
 installed metadata. The opt-in test builds a uniquely named Rust fixture outside
 Homebrew, installs release/debug artifacts through the actual Formula recipe
-starting from an installed HEAD keg, with its dependency declarations intact,
+starting with stable and HEAD kegs whose `opt` and command links diverge, with
+its dependency declarations intact,
 verifies no build dependencies and byte-for-byte binary reuse, checks
 links/resources and loads metadata after
 removing the checkout. It removes its fixture kegs and tap afterwards and never
