@@ -1,11 +1,16 @@
 # frozen_string_literal: true
 
 # Standalone Taskix CLI and bundled Obsidian sync integration.
+local_library = File.expand_path("../lib/agentix_local_build.rb", __dir__)
+local_library = File.expand_path("../share/taskix/agentix_local_build.rb", __dir__) unless File.file?(local_library)
+require local_library
+
 class Taskix < Formula
   desc "Coordinate agent tasks with leases, plans, and Markdown boards"
   homepage "https://github.com/tenfyzhong/agentix"
   url "https://github.com/tenfyzhong/agentix/archive/refs/tags/0.4.12.tar.gz"
   sha256 "2d84b365ce43d07722d5a72f55e87e082b9903475d9c4e8a8ee4322b1feb1be9"
+  AgentixLocalBuild.configure(self, "taskix", __dir__)
   license "MIT"
   head "https://github.com/tenfyzhong/agentix.git", branch: "main"
 
@@ -19,8 +24,11 @@ class Taskix < Formula
   depends_on "rust" => :build
 
   def install
-    system "bash", ".github/scripts/set-release-version.sh", version.to_s unless build.head?
-    system "cargo", "install", *std_cargo_args(path: "crates/taskix")
+    local_build = AgentixLocalBuild.active?("taskix", __dir__)
+    system "bash", ".github/scripts/set-release-version.sh", version.to_s if !build.head? && !local_build
+    cargo_args = AgentixLocalBuild.cargo_args("taskix", __dir__)
+    system "cargo", "install", *std_cargo_args(path: "crates/taskix"), *cargo_args
+    AgentixLocalBuild.install(self, "taskix", __dir__)
     pkgshare.install "config/taskix.example.toml"
 
     bash_completion.install "completions/taskix.bash" => "taskix"
@@ -74,7 +82,10 @@ class Taskix < Formula
     assert_path_exists fish_completion/"taskix.fish"
     assert_path_exists pkgshare/"taskix.example.toml"
     assert_match "taskix ", shell_output("#{bin}/taskix --version")
-    assert_match version.to_s, shell_output("#{bin}/taskix --version") unless build.head?
+    local_build = AgentixLocalBuild.active?("taskix", __dir__)
+    if !build.head? && !local_build
+      assert_match version.to_s, shell_output("#{bin}/taskix --version")
+    end
 
     (testpath/"documents/.obsidian").mkpath
     system bin/"taskix", "--config", testpath/"config.toml", "init",

@@ -1,8 +1,13 @@
+local_library = File.expand_path("../lib/agentix_local_build.rb", __dir__)
+local_library = File.expand_path("../share/agentix/agentix_local_build.rb", __dir__) unless File.file?(local_library)
+require local_library
+
 class Agentix < Formula
   desc "Control local coding-agent sessions from IM"
   homepage "https://github.com/tenfyzhong/agentix"
   url "https://github.com/tenfyzhong/agentix/archive/refs/tags/0.4.12.tar.gz"
   sha256 "2d84b365ce43d07722d5a72f55e87e082b9903475d9c4e8a8ee4322b1feb1be9"
+  AgentixLocalBuild.configure(self, "agentix", __dir__)
   license "MIT"
   head "https://github.com/tenfyzhong/agentix.git", branch: "main"
 
@@ -17,8 +22,11 @@ class Agentix < Formula
   depends_on "rust" => :build
 
   def install
-    system "bash", ".github/scripts/set-release-version.sh", version.to_s unless build.head?
-    system "cargo", "install", *std_cargo_args(path: "crates/agentix")
+    local_build = AgentixLocalBuild.active?("agentix", __dir__)
+    system "bash", ".github/scripts/set-release-version.sh", version.to_s if !build.head? && !local_build
+    cargo_args = AgentixLocalBuild.cargo_args("agentix", __dir__)
+    system "cargo", "install", *std_cargo_args(path: "crates/agentix"), *cargo_args
+    AgentixLocalBuild.install(self, "agentix", __dir__)
     pkgshare.install "config/agentix.example.toml"
 
     bash_completion.install "completions/agentix.bash" => "agentix"
@@ -54,6 +62,9 @@ class Agentix < Formula
     assert_path_exists fish_completion/"agentix.fish"
     assert_path_exists pkgshare/"agentix.example.toml"
     assert_match "agentix ", shell_output("#{bin}/agentix --version")
-    assert_match version.to_s, shell_output("#{bin}/agentix --version") unless build.head?
+    local_build = AgentixLocalBuild.active?("agentix", __dir__)
+    if !build.head? && !local_build
+      assert_match version.to_s, shell_output("#{bin}/agentix --version")
+    end
   end
 end
