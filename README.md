@@ -194,6 +194,8 @@ installation support. `--build-from-source` makes Homebrew run the Formula
 installation recipe for the local archive; the local recipe copies binaries
 and does not invoke Cargo or install Rust/LLVM or Protobuf build dependencies.
 Stable/remote HEAD source builds retain their existing build dependencies.
+While local mode is active, the Formula exposes only the local artifact spec,
+so `reinstall` uses that archive even when a remote HEAD version is installed.
 
 `HOMEBREW_AGENTIX_LOCAL_PROFILE` defaults to `release`. Build with `make`, then
 set it to `debug` to install existing debug binaries. The binaries must be
@@ -246,7 +248,8 @@ The normal suite checks artifact snapshots, content identity, missing inputs,
 profile/target selection, dependency declarations, Formula installation and
 installed metadata. The opt-in test builds a uniquely named Rust fixture outside
 Homebrew, installs release/debug artifacts through the actual Formula recipe
-with its dependency declarations intact, verifies no build dependencies and
-byte-for-byte binary reuse, checks links/resources and loads metadata after
+starting from an installed HEAD keg, with its dependency declarations intact,
+verifies no build dependencies and byte-for-byte binary reuse, checks
+links/resources and loads metadata after
 removing the checkout. It removes its fixture kegs and tap afterwards and never
 starts Agentix or Taskix services.

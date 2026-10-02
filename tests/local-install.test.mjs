@@ -8,11 +8,12 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
-test("real_homebrew_installs_prebuilt_local_binaries_without_build_dependencies", {
+test("real_homebrew_replaces_installed_head_with_prebuilt_local_binaries_without_build_dependencies", {
     skip: process.env.AGENTIX_TEST_HOMEBREW !== "1", timeout: 300_000,
 }, async () => {
     const dir = await mkdtemp(join(tmpdir(), "brew-artifact-acceptance-"));
     const source = join(dir, "local source");
+    const headRepository = join(dir, "head.git");
     const name = `agentix-source-fixture-${process.pid}`;
     const tap = `codex-fixture/source-${process.pid}`;
     const env = {...process.env, HOMEBREW_NO_AUTO_UPDATE: "1", HOMEBREW_NO_INSTALL_CLEANUP: "1", HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK: "1", HOMEBREW_AGENTIX_LOCAL_SOURCE: "", HOMEBREW_AGENTIX_LOCAL_TARGET_DIR: ""};
@@ -34,7 +35,7 @@ test("real_homebrew_installs_prebuilt_local_binaries_without_build_dependencies"
         await writeFile(join(source, ".github/scripts/set-release-version.sh"), "exit 91\n");
         await writeFile(join(source, "config", `${name}.example.toml`), "fixture = true\n");
         for (const file of [`${name}.bash`, `_${name}`, `${name}.fish`]) await writeFile(join(source, "completions", file), "# fixture\n");
-        execFileSync("git", ["init", "--quiet", source]);
+        execFileSync("git", ["init", "--quiet", "--initial-branch=main", source]);
         execFileSync("git", ["-C", source, "add", "."]);
         const archive = join(dir, "source-1.2.3.tar.gz");
         execFileSync("tar", ["-czf", archive, "--exclude=.git", "-C", source, "."]);
@@ -45,10 +46,19 @@ test("real_homebrew_installs_prebuilt_local_binaries_without_build_dependencies"
             .replaceAll(`${name}_local_build.rb`, "agentix_local_build.rb")
             .replace(/  url "[^"\n]+"/, `  url "file://${archive}"`)
             .replace(/  sha256 "[a-f0-9]+"/, `  sha256 "${checksum}"`)
+            .replace(/ {2,4}head "[^"\n]+", branch: "main"/, `    head "file://${headRepository}", using: :git, branch: "main"`)
             .replace(/  bottle do\n.*?  end\n/s, "");
         const formulaPath = join(tapPath, "Formula", `${name}.rb`);
-        await writeFile(formulaPath, formula);
+        // Bootstrap an installed HEAD keg without Homebrew compiler dependencies.
+        execFileSync("cargo", ["build", "--release", "--manifest-path", join(source, "Cargo.toml")]);
+        execFileSync("git", ["-C", source, "add", "--force", `target/release/${name}`]);
+        execFileSync("git", ["-C", source, "-c", "user.name=Homebrew Fixture", "-c", "user.email=fixture@example.invalid", "-c", "commit.gpgsign=false", "-c", "core.hooksPath=/dev/null", "commit", "-s", "--quiet", "-m", "test: bootstrap HEAD fixture"]);
+        execFileSync("git", ["clone", "--bare", "--quiet", source, headRepository]);
+        await writeFile(formulaPath, `class ${klass} < Formula\n  desc "Local artifact HEAD transition fixture"\n  homepage "https://example.invalid"\n  url "file://${archive}"\n  sha256 "${checksum}"\n  head "file://${headRepository}", using: :git, branch: "main"\n  def install\n    bin.install "target/release/${name}"\n  end\nend\n`);
         brew(["trust", tap]);
+        brew(["install", "--HEAD", `${tap}/${name}`]);
+        assert.match(brew(["list", "--versions", `${tap}/${name}`]), /HEAD-/);
+        await writeFile(formulaPath, formula);
         const prefix = brew(["--prefix"]).trim();
         const command = join(prefix, "bin", name);
         for (const [iteration, profile] of [[1, "release"], [2, "release"], [3, "debug"]]) {
@@ -75,6 +85,7 @@ test("real_homebrew_installs_prebuilt_local_binaries_without_build_dependencies"
             assert.equal(record.profile, profile);
             snapshots.add(fileURLToPath(record.url));
             brew(["linkage", "--test", `${tap}/${name}`]);
+            brew(["test", `${tap}/${name}`], local);
         }
         await rm(source, {recursive: true});
         const installed = await realpath(join(prefix, "opt", name));
