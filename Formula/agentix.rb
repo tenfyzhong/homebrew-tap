@@ -9,7 +9,9 @@ class Agentix < Formula
   sha256 "2d84b365ce43d07722d5a72f55e87e082b9903475d9c4e8a8ee4322b1feb1be9"
   AgentixLocalBuild.configure(self, "agentix", __dir__)
   license "MIT"
-  head "https://github.com/tenfyzhong/agentix.git", branch: "main"
+  unless AgentixLocalBuild.active?("agentix", __dir__)
+    head "https://github.com/tenfyzhong/agentix.git", branch: "main"
+  end
 
   bottle do
     root_url "https://github.com/tenfyzhong/agentix/releases/download/0.4.12"
@@ -60,14 +62,18 @@ class Agentix < Formula
   end
 
   test do
-    assert_equal "https://github.com/tenfyzhong/agentix.git", head&.url
-    assert_equal "main", head.specs[:branch]
+    local_build = AgentixLocalBuild.active?("agentix", __dir__)
+    if local_build
+      assert_nil head
+    else
+      assert_equal "https://github.com/tenfyzhong/agentix.git", head&.url
+      assert_equal "main", head.specs[:branch]
+    end
     assert_path_exists bash_completion/"agentix"
     assert_path_exists zsh_completion/"_agentix"
     assert_path_exists fish_completion/"agentix.fish"
     assert_path_exists pkgshare/"agentix.example.toml"
     assert_match "agentix ", shell_output("#{bin}/agentix --version")
-    local_build = AgentixLocalBuild.active?("agentix", __dir__)
     if !build.head? && !local_build
       assert_match version.to_s, shell_output("#{bin}/agentix --version")
     end

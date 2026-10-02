@@ -130,6 +130,8 @@ end
 class Formula
   def self.inherited(klass); klass.instance_variable_set(:@deps, []); end
   def self.deps; @deps; end
+  def self.head(url, **options); @head = {url: url, options: options}; end
+  def self.head_spec; @head; end
   def self.depends_on(spec); @deps << spec.keys.first; end
   def self.method_missing(*); end
   def self.bottle; end
@@ -148,7 +150,7 @@ end
 load ARGV.shift
 klass = Object.const_get(ARGV.shift)
 klass.new.install if ENV["TEST_INSTALL"] == "1"
-puts JSON.generate({dependencies: klass.deps, events: $events || []})
+puts JSON.generate({dependencies: klass.deps, head: klass.head_spec, events: $events || []})
 `;
 for (const name of ["agentix", "taskix"]) {
     test(`${name}_local_recipe_has_no_build_dependencies_and_installs_binary`, async t => {
@@ -157,6 +159,7 @@ for (const name of ["agentix", "taskix"]) {
         assert.equal(result.status, 0, result.stderr);
         const data = JSON.parse(result.stdout);
         assert.deepEqual(data.dependencies, []);
+        assert.equal(data.head, null, "Local artifacts must not inherit an installed remote HEAD spec");
         assert.ok(data.events.some(([kind, paths]) => kind === "bin" && paths.includes(`bin/${name}`)));
         assert.ok(data.events.some(([kind]) => kind === "fish"));
     });
@@ -164,7 +167,9 @@ for (const name of ["agentix", "taskix"]) {
         const f = await fixture(t);
         const result = spawnSync("ruby", ["-e", formulaScript, join(root, `Formula/${name}.rb`), name === "agentix" ? "Agentix" : "Taskix"], {encoding: "utf8", env: {...f.env(""), TEST_INSTALL: "0"}});
         assert.equal(result.status, 0, result.stderr);
-        assert.deepEqual(JSON.parse(result.stdout).dependencies, name === "agentix" ? ["protobuf", "rust"] : ["rust"]);
+        const data = JSON.parse(result.stdout);
+        assert.deepEqual(data.dependencies, name === "agentix" ? ["protobuf", "rust"] : ["rust"]);
+        assert.deepEqual(data.head, {url: "https://github.com/tenfyzhong/agentix.git", options: {branch: "main"}});
     });
 }
 

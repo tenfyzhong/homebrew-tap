@@ -12,7 +12,9 @@ class Taskix < Formula
   sha256 "2d84b365ce43d07722d5a72f55e87e082b9903475d9c4e8a8ee4322b1feb1be9"
   AgentixLocalBuild.configure(self, "taskix", __dir__)
   license "MIT"
-  head "https://github.com/tenfyzhong/agentix.git", branch: "main"
+  unless AgentixLocalBuild.active?("taskix", __dir__)
+    head "https://github.com/tenfyzhong/agentix.git", branch: "main"
+  end
 
   bottle do
     root_url "https://github.com/tenfyzhong/agentix/releases/download/0.4.12"
