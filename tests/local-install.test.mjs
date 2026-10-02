@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, realpath, rm, symlink, writeFile } from "node:fs/promises";
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { tmpdir } from "node:os";
@@ -8,7 +8,7 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
-test("real_homebrew_replaces_installed_head_with_prebuilt_local_binaries_without_build_dependencies", {
+test("real_homebrew_links_local_artifacts_when_stable_opt_and_head_links_diverge", {
     skip: process.env.AGENTIX_TEST_HOMEBREW !== "1", timeout: 300_000,
 }, async () => {
     const dir = await mkdtemp(join(tmpdir(), "brew-artifact-acceptance-"));
@@ -54,12 +54,22 @@ test("real_homebrew_replaces_installed_head_with_prebuilt_local_binaries_without
         execFileSync("git", ["-C", source, "add", "--force", `target/release/${name}`]);
         execFileSync("git", ["-C", source, "-c", "user.name=Homebrew Fixture", "-c", "user.email=fixture@example.invalid", "-c", "commit.gpgsign=false", "-c", "core.hooksPath=/dev/null", "commit", "-s", "--quiet", "-m", "test: bootstrap HEAD fixture"]);
         execFileSync("git", ["clone", "--bare", "--quiet", source, headRepository]);
-        await writeFile(formulaPath, `class ${klass} < Formula\n  desc "Local artifact HEAD transition fixture"\n  homepage "https://example.invalid"\n  url "file://${archive}"\n  sha256 "${checksum}"\n  head "file://${headRepository}", using: :git, branch: "main"\n  def install\n    bin.install "target/release/${name}"\n  end\nend\n`);
+        const bootstrapArchive = join(dir, "bootstrap-1.2.3.tar.gz");
+        execFileSync("tar", ["-czf", bootstrapArchive, "-C", source, `target/release/${name}`, "config", "completions"]);
+        const bootstrapChecksum = createHash("sha256").update(await readFile(bootstrapArchive)).digest("hex");
+        await writeFile(formulaPath, `class ${klass} < Formula\n  desc "Local artifact HEAD transition fixture"\n  homepage "https://example.invalid"\n  url "file://${bootstrapArchive}"\n  sha256 "${bootstrapChecksum}"\n  head "file://${headRepository}", using: :git, branch: "main"\n  def install\n    bin.install "target/release/${name}"\n  end\nend\n`);
         brew(["trust", tap]);
-        brew(["install", "--HEAD", `${tap}/${name}`]);
+        brew(["install", `${tap}/${name}`]);
+        const prefix = brew(["--prefix"]).trim();
+        const opt = join(prefix, "opt", name);
+        const stable = await realpath(opt);
+        brew(["install", "--HEAD", "--skip-link", `${tap}/${name}`]);
+        brew(["ruby", "-e", 'require "formulary"; require "unlink"; f = Formulary.factory(ARGV[0], :head); ref = HOMEBREW_LINKED_KEGS/f.name; Homebrew::Unlink.unlink(Keg.new(ref.realpath)); keg = Keg.new(f.latest_head_prefix); keg.lock { keg.link }', `${tap}/${name}`]);
+        const headKeg = await realpath(opt);
+        await rm(opt);
+        await symlink(stable, opt);
         assert.match(brew(["list", "--versions", `${tap}/${name}`]), /HEAD-/);
         await writeFile(formulaPath, formula);
-        const prefix = brew(["--prefix"]).trim();
         const command = join(prefix, "bin", name);
         for (const [iteration, profile] of [[1, "release"], [2, "release"], [3, "debug"]]) {
             const text = `fn main() { println!("${name} dirty-${iteration}-{}", if cfg!(debug_assertions) { "debug" } else { "release" }); }\n`;
@@ -72,10 +82,13 @@ test("real_homebrew_replaces_installed_head_with_prebuilt_local_binaries_without
             const deps = JSON.parse(brew(["info", "--json=v2", `${tap}/${name}`], local)).formulae[0];
             assert.deepEqual(deps.build_dependencies, []);
             assert.deepEqual(deps.dependencies, []);
-            brew(["reinstall", "--build-from-source", `${tap}/${name}`], local);
+            brew(["install", "--build-from-source", "--skip-link", `${tap}/${name}`], local);
+            brew(["ruby", "-e", 'require "formulary"; require "unlink"; kegs = ARGV.map { |name| f = Formulary.factory(name, :stable); abort "Not installed: #{f.prefix}" unless f.prefix.directory?; Keg.new(f.prefix) }; kegs.each { |keg| ref = HOMEBREW_LINKED_KEGS/keg.name; Homebrew::Unlink.unlink(Keg.new(ref.realpath)) if ref.symlink? }; kegs.each { |keg| keg.lock { keg.link } }', `${tap}/${name}`], local);
             assert.equal(execFileSync(command, ["--version"], {encoding: "utf8"}).trim(), `${name} dirty-${iteration}-${profile}`);
             assert.equal(await readFile(main, "utf8"), text);
             assert.equal(await readFile(formulaPath, "utf8"), formula);
+            assert.ok(await readFile(join(stable, "bin", name)));
+            assert.ok(await readFile(join(headKeg, "bin", name)));
             const keg = await realpath(join(prefix, "opt", name));
             assert.match(keg, new RegExp(`0\\.0\\.0-local\\..*\\.${profile}$`));
             assert.equal(await realpath(command), join(keg, "bin", name));
