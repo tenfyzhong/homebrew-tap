@@ -47,6 +47,11 @@ jobs:
           git fetch origin "$GITHUB_REF"
           git checkout --detach FETCH_HEAD
 
+      - name: Test local source support
+        run: |
+          cd "$(brew --repository tenfyzhong/tap)"
+          node --test tests/*.test.mjs
+
       - run: brew test-bot --only-formulae-detect --tap=tenfyzhong/tap
         id: formulae-detect
 
