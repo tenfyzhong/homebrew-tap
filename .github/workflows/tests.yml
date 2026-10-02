@@ -61,7 +61,7 @@ jobs:
         env:
           TESTING_FORMULAE: ${{ steps.formulae-detect.outputs.testing_formulae }}
         run: |
-          brew info --json=v2 $TESTING_FORMULAE | ruby -rjson -e '
+          brew info --json=v2 ${TESTING_FORMULAE//,/ } | ruby -rjson -e '
             formulae = JSON.parse(STDIN.read).fetch("formulae")
             stable, head = formulae.partition { |formula| formula.fetch("versions")["stable"] }
             File.open(ENV.fetch("GITHUB_OUTPUT"), "a") do |output|
@@ -98,4 +98,4 @@ jobs:
         if: steps.formulae-detect.outputs.testing_formulae != ''
         env:
           FORMULAE: ${{ steps.formulae-detect.outputs.testing_formulae }}
-        run: brew audit --strict $FORMULAE
+        run: brew audit --strict ${FORMULAE//,/ }
