@@ -117,6 +117,23 @@ end
     }
 });
 
+test("homebrew_accepts_ollaya_formula_component_order", {
+    skip: spawnSync("brew", ["--version"], { encoding: "utf8" }).status !== 0,
+    timeout: 180_000,
+}, async t => {
+    const directory = await mkdtemp(join(tmpdir(), "ollaya-style-"));
+    t.after(() => rm(directory, { recursive: true, force: true }));
+    await mkdir(join(directory, "Formula"));
+    const path = join(directory, "Formula", "ollaya.rb");
+    await writeFile(path, currentFormula);
+    const result = spawnSync("brew", ["style", "--only-cops", "FormulaAudit/ComponentsOrder", path], {
+        encoding: "utf8", timeout: 120_000,
+        env: { ...process.env, HOMEBREW_NO_AUTO_UPDATE: "1" },
+    });
+    assert.equal(result.status, 0, result.stdout + result.stderr);
+    assert.match(result.stdout, /1 file inspected/);
+});
+
 test("explicit_version_is_normalized_and_resolved_as_a_release_tag", async () => {
     const { prepareUpdate } = await import("../scripts/update-ollaya.mjs");
     for (const version of [nextVersion, nextTag]) {
