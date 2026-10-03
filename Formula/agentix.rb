@@ -7,6 +7,7 @@ class Agentix < Formula
   homepage "https://github.com/tenfyzhong/agentix"
   url "https://github.com/tenfyzhong/agentix/archive/refs/tags/0.5.0.tar.gz"
   sha256 "2de222b6054e1881de67f0cf8eefc1a3c8eee876af8ae0923ce34b35e573bf48"
+  license "MIT"
 
   bottle do
     root_url "https://github.com/tenfyzhong/agentix/releases/download/0.5.0"
@@ -15,7 +16,6 @@ class Agentix < Formula
     sha256 cellar: :any_skip_relocation, x86_64_linux:  "d57f69870bb08018308739636bda7cc23c30aeb00bcbe3b7d7373a7799065763"
   end
   AgentixLocalBuild.configure(self, "agentix", __dir__)
-  license "MIT"
   unless AgentixLocalBuild.active?("agentix", __dir__)
     head "https://github.com/tenfyzhong/agentix.git", branch: "main"
   end
