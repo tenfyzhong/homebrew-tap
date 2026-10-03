@@ -75,6 +75,7 @@ brew services restart tenfyzhong/tap/agentix
 | [`gg`](Formula/gg.rb) | Manage Go versions. | [gg](https://github.com/tenfyzhong/gg) |
 | [`gitai`](Formula/gitai.rb) | Generate Git commit messages, pull requests, and tags with AI assistance. | [gitai](https://github.com/tenfyzhong/gitai) |
 | [`modeltap`](Formula/modeltap.rb) | Monitor AI traffic through a MITM proxy with configurable egress proxies. | [ModelTap](https://github.com/tenfyzhong/modeltap) |
+| [`ollaya`](Formula/ollaya.rb) | Run open decision models through a local API. | [Ollaya](https://github.com/ollaya-dev/ollaya) |
 | [`rime-dict-manager`](Formula/rime-dict-manager.rb) | Manage Rime user dictionaries. | [rime-dict-manager](https://github.com/tenfyzhong/rime-dict-manager) |
 | [`st2`](Formula/st2.rb) | Generate Go, Protobuf, and Thrift code from JSON, Protobuf, Thrift, Go, or CSV. | [st2](https://github.com/tenfyzhong/st2) |
 | [`taskix`](Formula/taskix.rb) | Coordinate agent tasks with leases, plans, and Markdown boards. | [Taskix (Agentix repository)](https://github.com/tenfyzhong/agentix) |
@@ -168,6 +169,34 @@ Installing or upgrading the Formula does not configure remotes or schedule backu
 See [Backup and recovery](https://github.com/tenfyzhong/agentix/wiki/Backup-and-Recovery)
 for manual runs, launchd/cron scheduling, and restore verification.
 
+### Ollaya
+
+Install Ollaya and start its background service:
+
+```sh
+brew install tenfyzhong/tap/ollaya
+brew services start ollaya
+curl http://127.0.0.1:11435/api/version
+```
+
+Supported platforms are Apple Silicon with macOS 14 or later, Linux x86_64,
+and Linux ARM64. Linux requires glibc 2.38 or newer, a C++ runtime providing
+`GLIBCXX_3.4.31`, and GCC's OpenMP runtime (`libgomp.so.1`), as in Ubuntu 24.04+
+with `libgomp1` installed. The Formula installs upstream binaries, llama.cpp runtime
+libraries, the bundled agent skill, and the MLX Metal library on macOS.
+Linux uses the base CPU package; optional CUDA packs are not installed.
+Models remain in `~/.ollaya/models` across upgrades. Download a model with
+`ollaya pull laya`, then follow the [upstream documentation](https://github.com/ollaya-dev/ollaya).
+
+If the CLI previously started a daemon, run `ollaya stop` before starting the
+Homebrew service so that both processes do not compete for port 11435.
+Logs are in `$(brew --prefix)/var/log/ollaya.log` and
+`$(brew --prefix)/var/log/ollaya.err.log`. After upgrading:
+
+```sh
+brew services restart ollaya
+```
+
 ### Other tools
 
 Check a formula's dependencies and post-installation instructions with
@@ -191,6 +220,51 @@ brew upgrade tenfyzhong/tap/agentix tenfyzhong/tap/taskix
 ```
 
 Replace the formula names with those you have installed.
+
+### Updating the Ollaya Formula from n8n
+
+The [Update Ollaya workflow](.github/workflows/update-ollaya.yml) supports
+`workflow_dispatch`. Once this workflow is merged into `main`, run it through
+GitHub's **Actions → Update Ollaya → Run workflow**, or call GitHub's
+[workflow dispatch API](https://docs.github.com/en/rest/actions/workflows#create-a-workflow-dispatch-event)
+from an n8n HTTP Request node:
+
+- Method: `POST`
+- URL: `https://api.github.com/repos/tenfyzhong/homebrew-tap/actions/workflows/update-ollaya.yml/dispatches`
+- Authentication: a GitHub credential with repository **Actions: write** permission
+- Headers: `Accept: application/vnd.github+json` and `X-GitHub-Api-Version: 2026-03-10`
+- JSON body:
+
+```json
+{
+  "ref": "main",
+  "inputs": {
+    "version": ""
+  }
+}
+```
+
+An empty version selects the latest published stable release. To request a
+specific stable release, set `version` to `0.9.0` or `v0.9.0`. Prereleases,
+drafts, downgrades, missing packages, and checksum mismatches fail without
+changing the Formula. The workflow downloads and verifies all three platform
+packages and the separate MLX package, then runs the tap unit tests.
+Repeated triggers reuse the `automation/update-ollaya` branch and PR; if the
+Formula is already current, no new commit or PR is created.
+
+The workflow creates or updates a signed-off version PR targeting `main`.
+Merge that PR to publish the new Formula; it does not automatically merge or
+upgrade Ollaya on installed machines. Users subsequently run `brew update`,
+`brew upgrade ollaya`, and `brew services restart ollaya`.
+
+For the default `GITHUB_TOKEN`, enable **Settings → Actions → General → Workflow
+permissions → Allow GitHub Actions to create and approve pull requests**.
+GitHub does not trigger PR CI for PRs created with `GITHUB_TOKEN`. To run the
+existing macOS/Linux Homebrew CI automatically on version PRs, configure the
+repository secret `OLLAYA_UPDATE_TOKEN` with a fine-grained PAT granting this
+repository **Contents: write** and **Pull requests: write**. This is separate
+from n8n's dispatch credential. See the action's
+[token documentation](https://github.com/peter-evans/create-pull-request#token).
 
 ## Installing local Agentix binaries
 
@@ -321,3 +395,16 @@ verifies no build dependencies and byte-for-byte binary reuse, checks
 links/resources and loads metadata after
 removing the checkout. It removes its fixture kegs and tap afterwards and never
 starts Agentix or Taskix services.
+
+To validate Ollaya against the real upstream release packages:
+
+```sh
+OLLAYA_TEST_HOMEBREW=1 node --test --test-name-pattern=real_homebrew tests/ollaya.test.mjs
+```
+
+This opt-in test downloads the release, checks Homebrew style/audit, installs a
+uniquely named unlinked fixture, and runs the Formula's runtime-library and API
+tests. On macOS it also starts a temporary Homebrew service on an unused port
+with an isolated home/model directory, verifies its API, and stops it. The
+fixture keg, tap, and service logs are removed afterwards. It does not download
+models or change an existing Ollaya installation.
