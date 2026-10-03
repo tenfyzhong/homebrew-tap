@@ -6,6 +6,7 @@ import { execFileSync, spawnSync } from "node:child_process";
 import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 const formulaPath = new URL("../Formula/ollaya.rb", import.meta.url);
 const assetNames = ["ollaya-darwin-arm64.tar.zst", "ollaya-darwin-arm64-mlx.tar.zst",
@@ -71,6 +72,66 @@ test("updates_all_archives_and_mlx_without_changing_service_or_install_logic", a
     assert.equal(result.formula.split("  def install\n")[1], formula.split("  def install\n")[1]);
     const again = await prepareUpdate(result.formula, { request: source.request });
     assert.equal(again.changed, false);
+});
+
+test("homebrew_validates_all_platforms_before_and_after_an_ollaya_update", {
+    skip: spawnSync("brew", ["--version"], { encoding: "utf8" }).status !== 0,
+    timeout: 120_000,
+}, async t => {
+    const { prepareUpdate } = await import("../scripts/update-ollaya.mjs");
+    const source = upstream();
+    const updated = await prepareUpdate(currentFormula, { request: source.request });
+    const directory = await mkdtemp(join(tmpdir(), "ollaya-platforms-"));
+    t.after(() => rm(directory, { recursive: true, force: true }));
+    for (const [formula, version] of [[currentFormula, currentVersion], [updated.formula, nextVersion]]) {
+        const path = join(directory, "ollaya.rb");
+        await writeFile(path, formula);
+        const result = spawnSync("brew", ["ruby", "-e", `
+require "formulary"
+require "simulate_system"
+systems = MacOSVersion::SYMBOLS.keys
+systems << :linux
+systems.each do |os|
+  [:intel, :arm].each do |arch|
+    Homebrew::SimulateSystem.with(os: os, arch: arch) do
+      Formulary.clear_cache
+      formula = Formulary.from_contents("ollaya", Pathname(ARGV.fetch(1)), File.read(ARGV.fetch(0)))
+      puts JSON.generate(os: os, arch: arch, url: formula.stable.url,
+                         arches: formula.requirements.grep(ArchRequirement).map(&:arch))
+    end
+  end
+end
+`, path, fileURLToPath(formulaPath)], { encoding: "utf8", timeout: 90_000,
+            env: { ...process.env, HOMEBREW_NO_AUTO_UPDATE: "1" } });
+        assert.equal(result.status, 0, result.stdout + result.stderr);
+        const platforms = result.stdout.trim().split("\n").map(line => JSON.parse(line));
+        assert.ok(platforms.some(platform => platform.os === "sonoma" && platform.arch === "intel"));
+        for (const platform of platforms) {
+            const archive = platform.os === "linux"
+                ? `ollaya-linux-${platform.arch === "intel" ? "amd64" : "arm64"}.tar.zst`
+                : "ollaya-darwin-arm64.tar.zst";
+            assert.equal(platform.url, `https://github.com/ollaya-dev/ollaya/releases/download/v${version}/${archive}`);
+            assert.deepEqual(platform.arches, platform.os === "linux" ? [] : ["arm64"],
+                "macOS Intel validation must preserve the ARM-only installation requirement");
+        }
+    }
+});
+
+test("homebrew_accepts_ollaya_formula_component_order", {
+    skip: spawnSync("brew", ["--version"], { encoding: "utf8" }).status !== 0,
+    timeout: 180_000,
+}, async t => {
+    const directory = await mkdtemp(join(tmpdir(), "ollaya-style-"));
+    t.after(() => rm(directory, { recursive: true, force: true }));
+    await mkdir(join(directory, "Formula"));
+    const path = join(directory, "Formula", "ollaya.rb");
+    await writeFile(path, currentFormula);
+    const result = spawnSync("brew", ["style", "--only-cops", "FormulaAudit/ComponentsOrder", path], {
+        encoding: "utf8", timeout: 120_000,
+        env: { ...process.env, HOMEBREW_NO_AUTO_UPDATE: "1" },
+    });
+    assert.equal(result.status, 0, result.stdout + result.stderr);
+    assert.match(result.stdout, /1 file inspected/);
 });
 
 test("explicit_version_is_normalized_and_resolved_as_a_release_tag", async () => {

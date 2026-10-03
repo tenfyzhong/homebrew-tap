@@ -1,6 +1,8 @@
 class Ollaya < Formula
   desc "Run open decision models locally"
   homepage "https://github.com/ollaya-dev/ollaya"
+  url "https://github.com/ollaya-dev/ollaya/releases/download/v0.9.0/ollaya-darwin-arm64.tar.zst"
+  sha256 "9572fc25e59acb58f1ef07be48a0af0804ac8b9b8d0e6b34026c6618d4fa6518"
   license "Apache-2.0"
 
   livecheck do
@@ -13,11 +15,6 @@ class Ollaya < Formula
   on_macos do
     depends_on arch: :arm64
     depends_on macos: :sonoma
-
-    on_arm do
-      url "https://github.com/ollaya-dev/ollaya/releases/download/v0.9.0/ollaya-darwin-arm64.tar.zst"
-      sha256 "9572fc25e59acb58f1ef07be48a0af0804ac8b9b8d0e6b34026c6618d4fa6518"
-    end
 
     resource "mlx" do
       url "https://github.com/ollaya-dev/ollaya/releases/download/v0.9.0/ollaya-darwin-arm64-mlx.tar.zst"
