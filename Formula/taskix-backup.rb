@@ -5,8 +5,8 @@ class TaskixBackup < Formula
 
   desc "Back up and restore Taskix SQLite databases with rclone"
   homepage "https://github.com/tenfyzhong/agentix"
-  head "https://github.com/tenfyzhong/agentix.git", branch: "main"
   license "MIT"
+  head "https://github.com/tenfyzhong/agentix.git", branch: "main"
 
   depends_on "python@3.14"
   depends_on "rclone"

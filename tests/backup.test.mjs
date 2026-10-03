@@ -9,6 +9,7 @@ import { join } from "node:path";
 test("backup_formula_installs_a_standalone_command_with_python_and_rclone", async () => {
     const formula = await readFile(new URL("../Formula/taskix-backup.rb", import.meta.url), "utf8");
     assert.match(formula, /class TaskixBackup < Formula/);
+    assert.ok(formula.indexOf('license "MIT"') < formula.indexOf('head "'), "License must precede HEAD for Homebrew audit");
     assert.match(formula, /depends_on "python@3\.14"/);
     assert.match(formula, /depends_on "rclone"/);
     assert.match(formula, /rewrite_shebang.*scripts\/taskix-backup\.py/);
@@ -43,14 +44,17 @@ test("real_homebrew_installs_and_pours_the_backup_formula_and_round_trips_a_data
         const digest = createHash("sha256").update(await readFile(archive)).digest("hex");
         const klass = name.split("-").map(word => word[0].toUpperCase() + word.slice(1)).join("");
         const template = await readFile(new URL("../Formula/taskix-backup.rb", import.meta.url), "utf8");
-        const formula = template.replace("class TaskixBackup", `class ${klass}`)
-            .replace(/  head .*\n/, `  url "file://${archive}"\n  sha256 "${digest}"\n`)
+        const headFormula = template.replace("class TaskixBackup", `class ${klass}`)
             .replaceAll('"taskix-backup"', `"${name}"`)
             .replaceAll("#{bin}/taskix-backup", `#{bin}/${name}`);
+        const formula = headFormula.replace(/  head .*\n/, "")
+            .replace(/  homepage .*\n/, line => `${line}  url "file://${archive}"\n  sha256 "${digest}"\n`);
         const prepared = join(directory, `${name}.rb`);
         await writeFile(prepared, formula);
-        await writeFile(join(tapPath, "Formula", `${name}.rb`), formula);
+        await writeFile(join(tapPath, "Formula", `${name}.rb`), headFormula);
         brew("trust", tap);
+        brew("audit", "--strict", `${tap}/${name}`);
+        await writeFile(join(tapPath, "Formula", `${name}.rb`), formula);
         brew("style", "--formula", `${tap}/${name}`);
         const result = spawnSync("bash", [join(source, ".github/scripts/build-homebrew-bottle.sh")], {
             cwd: directory, encoding: "utf8", timeout: 240_000,
