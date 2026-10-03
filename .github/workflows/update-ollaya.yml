@@ -1,0 +1,58 @@
+name: Update Ollaya
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Stable version (e.g. v0.9.0); leave empty for the latest release"
+        required: false
+        default: ""
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: update-ollaya
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: main
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: "22"
+      - name: Update version and verify release archives
+        id: update
+        env:
+          GH_TOKEN: ${{ github.token }}
+          OLLAYA_VERSION: ${{ inputs.version }}
+        run: node scripts/update-ollaya.mjs
+      - name: Test update
+        run: node --test tests/*.test.mjs
+      - name: Create or update the version pull request
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8
+        with:
+          token: ${{ secrets.OLLAYA_UPDATE_TOKEN || github.token }}
+          branch: automation/update-ollaya
+          base: main
+          add-paths: Formula/ollaya.rb
+          signoff: true
+          commit-message: "chore: update Ollaya to ${{ steps.update.outputs.version }}"
+          title: "chore: update Ollaya to ${{ steps.update.outputs.version }}"
+          body: |
+            Update Ollaya to stable release v${{ steps.update.outputs.version }}.
+
+            Verified the SHA256 of the macOS ARM64, Linux x86_64, Linux ARM64,
+            and macOS MLX archives against the upstream release manifest.
+            The tap unit tests passed. With OLLAYA_UPDATE_TOKEN configured,
+            Homebrew installation and API smoke tests also run in PR CI.
+          delete-branch: true
