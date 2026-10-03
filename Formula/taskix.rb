@@ -10,6 +10,7 @@ class Taskix < Formula
   homepage "https://github.com/tenfyzhong/agentix"
   url "https://github.com/tenfyzhong/agentix/archive/refs/tags/0.5.0.tar.gz"
   sha256 "2de222b6054e1881de67f0cf8eefc1a3c8eee876af8ae0923ce34b35e573bf48"
+  license "MIT"
 
   bottle do
     root_url "https://github.com/tenfyzhong/agentix/releases/download/0.5.0"
@@ -18,7 +19,6 @@ class Taskix < Formula
     sha256 cellar: :any_skip_relocation, x86_64_linux:  "514f90df6c2e07de449a67cee33bf4e21acfe52e4792fe2afa277de94d3e4b68"
   end
   AgentixLocalBuild.configure(self, "taskix", __dir__)
-  license "MIT"
   unless AgentixLocalBuild.active?("taskix", __dir__)
     head "https://github.com/tenfyzhong/agentix.git", branch: "main"
   end
