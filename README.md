@@ -78,6 +78,7 @@ brew services restart tenfyzhong/tap/agentix
 | [`rime-dict-manager`](Formula/rime-dict-manager.rb) | Manage Rime user dictionaries. | [rime-dict-manager](https://github.com/tenfyzhong/rime-dict-manager) |
 | [`st2`](Formula/st2.rb) | Generate Go, Protobuf, and Thrift code from JSON, Protobuf, Thrift, Go, or CSV. | [st2](https://github.com/tenfyzhong/st2) |
 | [`taskix`](Formula/taskix.rb) | Coordinate agent tasks with leases, plans, and Markdown boards. | [Taskix (Agentix repository)](https://github.com/tenfyzhong/agentix) |
+| [`taskix-backup`](Formula/taskix-backup.rb) | Back up and restore Taskix SQLite databases with rclone. | [Taskix backups](https://github.com/tenfyzhong/agentix/wiki/Backup-and-Recovery) |
 
 ## Setup
 
@@ -148,6 +149,24 @@ taskix memory status
 Logs are written to `$(brew --prefix)/var/log/taskix.log` and
 `$(brew --prefix)/var/log/taskix.err.log`. Stop any separately started
 `taskix memory serve` process before switching to the Homebrew service.
+
+### Taskix backup
+
+Install the backup command independently of Taskix:
+
+```sh
+brew install --HEAD tenfyzhong/tap/taskix-backup
+taskix-backup --help
+```
+
+The initial Formula is HEAD-only. After the first stable backup Formula is
+published by the Agentix release workflow, install without `--HEAD`.
+Homebrew installs Python and rclone and fixes the command's Python interpreter.
+The tool does not require a running Taskix service or Rust. Use your existing
+Taskix configuration and configure a named remote with `rclone config`.
+Installing or upgrading the Formula does not configure remotes or schedule backups.
+See [Backup and recovery](https://github.com/tenfyzhong/agentix/wiki/Backup-and-Recovery)
+for manual runs, launchd/cron scheduling, and restore verification.
 
 ### Other tools
 
