@@ -119,12 +119,13 @@ To build from the Agentix `main` branch instead, follow
 [Development versions](#development-versions), including the unlink step if the
 stable version is already installed.
 
-#### Memory service
+#### Taskix service
 
-The Taskix service runs `taskix memory serve`. Release 0.4.12 does not include
-memory; use a HEAD build until a newer release is available. Configure `[memory]`
-in `~/.config/taskix/config.toml`, including `enabled = true` and your model
-provider, before starting it:
+The Taskix service runs `taskix serve` with a current HEAD or local build.
+Release 0.5.0 still uses `taskix memory serve`; the formula retains that command
+for the stable release. Configure `[memory]` in `~/.config/taskix/config.toml`
+with your model provider, and export `TASKIX_MEMORY_ENABLED=true` in your login
+shell before starting it:
 
 ```sh
 brew services start tenfyzhong/tap/taskix
@@ -140,6 +141,10 @@ Variables set only in a terminal session are not loaded by a new service process
 `TASKIX_LOGIN_SHELL` can select a different absolute shell path when supplied to
 the service process. This code change must be included in the installed build.
 
+Reload configuration for future service work with `taskix reload` (release
+0.5.0: `taskix memory reload`). Invalid configuration leaves the active settings
+unchanged. Storage paths and IPC limits require a restart.
+
 After changing Fish variables or upgrading Taskix, restart and check the service:
 
 ```sh
@@ -149,7 +154,8 @@ taskix memory status
 
 Logs are written to `$(brew --prefix)/var/log/taskix.log` and
 `$(brew --prefix)/var/log/taskix.err.log`. Stop any separately started
-`taskix memory serve` process before switching to the Homebrew service.
+`taskix serve` (or legacy `taskix memory serve`) process before switching to the
+Homebrew service.
 
 ### Taskix backup
 
