@@ -43,8 +43,16 @@ class Taskix < Formula
     fish_completion.install "completions/taskix.fish"
   end
 
+  def legacy_service?
+    !version.head? && !version.to_s.start_with?("0.0.0-local.") && version <= Version.new("0.5.0")
+  end
+
   service do
-    run [opt_bin/"taskix", "memory", "serve"]
+    if f.legacy_service?
+      run [opt_bin/"taskix", "memory", "serve"]
+    else
+      run [opt_bin/"taskix", "serve"]
+    end
     keep_alive true
     stop_timeout 30
     log_path var/"log/taskix.log"
@@ -65,19 +73,23 @@ class Taskix < Formula
         taskix obsidian setup
         taskix sync
 
-      With a memory-capable build, configure [memory] and set enabled = true,
-      then start the memory service:
+      Configure [memory] and export TASKIX_MEMORY_ENABLED=true in your login shell,
+      then start the Taskix service:
         brew services start tenfyzhong/tap/taskix
 
       On macOS/Linux, Taskix loads exported variables from your login shell.
       If your login shell is fish, put service variables outside any
       `status is-interactive` guard, then restart after changing them.
-      Release 0.4.12 does not include memory; use --HEAD until a newer release.
+      With a build containing the top-level service commands, reload config with:
+        taskix reload
+      Release 0.5.0 uses taskix memory serve and taskix memory reload instead.
+      Use a current HEAD or local build for taskix serve and taskix reload.
     EOS
   end
 
   test do
-    assert_equal [opt_bin/"taskix", "memory", "serve"].map(&:to_s), service.command
+    service_args = legacy_service? ? %w[memory serve] : %w[serve]
+    assert_equal [opt_bin/"taskix", *service_args].map(&:to_s), service.command
 
     assert_match "cp -n #{pkgshare}/taskix.example.toml ~/.config/taskix/config.toml", caveats
     assert_match "Then edit ~/.config/taskix/config.toml", caveats
