@@ -1,8 +1,8 @@
 class Gitai < Formula
   desc "AI-assisted Git commit messages, pull requests, and tags"
   homepage "https://github.com/tenfyzhong/gitai"
-  url "https://github.com/tenfyzhong/gitai/archive/refs/tags/1.1.0.tar.gz"
-  sha256 "88e6c6c40af2da4f00518c31f44d5e997eac874af7a191bff210eec9af05fed4"
+  url "https://github.com/tenfyzhong/gitai/archive/refs/tags/1.1.2.tar.gz"
+  sha256 "a19cec81570085be4b256e702c3cba19a67d55b986a569109e5e043b241c42d9"
   license "MIT"
 
   depends_on "gh"
