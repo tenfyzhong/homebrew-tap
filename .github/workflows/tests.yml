@@ -7,6 +7,8 @@ env:
   HOMEBREW_DEVELOPER: 1
   HOMEBREW_GITHUB_ACTIONS: 1
   HOMEBREW_NO_AUTO_UPDATE: 1
+  # Homebrew 7.0.9 can reuse stale gem paths after style dependencies are installed.
+  HOMEBREW_NO_BOOTSNAP: 1
   GH_REPO: ${{github.repository}}
   GH_NO_UPDATE_NOTIFIER: 1
   GH_PROMPT_DISABLED: 1
