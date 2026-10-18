@@ -50,6 +50,8 @@ jobs:
       - name: Test local source support
         run: |
           cd "$(brew --repository tenfyzhong/tap)"
+          # Install once before test files invoke Homebrew concurrently.
+          brew install-bundler-gems --groups=style
           node --test tests/*.test.mjs
 
       - name: Test large snapshots with Homebrew Ruby
