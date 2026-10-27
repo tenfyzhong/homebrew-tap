@@ -5,15 +5,15 @@ require local_library
 class Agentix < Formula
   desc "Control local coding-agent sessions from IM"
   homepage "https://github.com/tenfyzhong/agentix"
-  url "https://github.com/tenfyzhong/agentix/archive/refs/tags/0.7.1.tar.gz"
-  sha256 "dd046321898e135c24277d7617c08118af0e762408307c092623b36c3b5cdd7b"
+  url "https://github.com/tenfyzhong/agentix/archive/refs/tags/0.7.2.tar.gz"
+  sha256 "6875fd6cca4c2b8966b8c2d8bfe2ea05ce0a5cd90ced7516fa29c8ecb5b14e17"
   license "MIT"
 
   bottle do
-    root_url "https://github.com/tenfyzhong/agentix/releases/download/0.7.1"
-    sha256 cellar: :any_skip_relocation, arm64_sequoia: "07843baa70ba4857f54d6c9ba94c20cb6f3efd82f302f2227c6cc815fb6577d7"
-    sha256 cellar: :any_skip_relocation, arm64_linux:   "536b87d6ad8cb23f0d776ceb79aed5fab64ce1fae0c0f8030425691a69c80cb6"
-    sha256 cellar: :any_skip_relocation, x86_64_linux:  "75fc6e701df41da57cec0a136e3168e5f3382e8ff7cba9af2da1c936790913cf"
+    root_url "https://github.com/tenfyzhong/agentix/releases/download/0.7.2"
+    sha256 cellar: :any_skip_relocation, arm64_sequoia: "04837a3865db2058d943a9e88ccf027cfa2d9f90499e0adfd7c85cc99ea47959"
+    sha256 cellar: :any_skip_relocation, arm64_linux:   "0d8bff4de7fcf366fdfb32e5feb9a21db0ca868c6ccc047bb95c9b66f463db26"
+    sha256 cellar: :any_skip_relocation, x86_64_linux:  "94ad29ed35de82ee0c909ea4485257de327347d981dbec78774732501426f299"
   end
 
   AgentixLocalBuild.configure(self, "agentix", __dir__)
