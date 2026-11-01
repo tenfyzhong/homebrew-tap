@@ -5,16 +5,16 @@ class TaskixBackup < Formula
 
   desc "Back up and restore Taskix SQLite databases with rclone"
   homepage "https://github.com/tenfyzhong/agentix"
-  url "https://github.com/tenfyzhong/agentix/archive/refs/tags/0.7.2.tar.gz"
-  sha256 "6875fd6cca4c2b8966b8c2d8bfe2ea05ce0a5cd90ced7516fa29c8ecb5b14e17"
+  url "https://github.com/tenfyzhong/agentix/archive/refs/tags/0.7.3.tar.gz"
+  sha256 "39faad9d3e76ab240c9effce34cbf55b978ec435cf3d19e266690eec955cff75"
   license "MIT"
   head "https://github.com/tenfyzhong/agentix.git", branch: "main"
 
   bottle do
-    root_url "https://github.com/tenfyzhong/agentix/releases/download/0.7.2"
-    sha256 cellar: :any_skip_relocation, arm64_sequoia: "f076b64da29432f8c54e8051068ca59080a053bcf3fd9526ab87310c34c7af4c"
-    sha256 cellar: :any_skip_relocation, arm64_linux:   "c241f61897c7ea25f0212a1545499e855a88682927093edc08de25de1fd4abbb"
-    sha256 cellar: :any_skip_relocation, x86_64_linux:  "3a9dcfe17ad08528668d4e3307cce6ab9cdb6fe7895af46ba709851d208c4c9a"
+    root_url "https://github.com/tenfyzhong/agentix/releases/download/0.7.3"
+    sha256 cellar: :any_skip_relocation, arm64_sequoia: "0237829817734b0a84a8c0e3118fb3f35a49012c591e8dac1936b03c6dfa3dfd"
+    sha256 cellar: :any_skip_relocation, arm64_linux:   "faca8f9eec33e9cca9d160aac8bd8a0ba85dad14445067f2fe3cb629b9e1df72"
+    sha256 cellar: :any_skip_relocation, x86_64_linux:  "ebf72cfd9d3f3a7c282db7e1f69019c2f6a245da4e416d2e757dbe7478a6a6b9"
   end
 
   depends_on "python@3.14"
