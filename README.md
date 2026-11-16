@@ -121,41 +121,98 @@ stable version is already installed.
 
 #### Taskix service
 
-The Taskix service runs `taskix serve` with a current HEAD or local build.
-Release 0.5.0 still uses `taskix memory serve`; the formula retains that command
-for the stable release. Configure `[memory]` in `~/.config/taskix/config.toml`
-with your model provider, and export `TASKIX_MEMORY_ENABLED=true` in your login
-shell before starting it:
+The Taskix service runs `taskix serve` with current releases, HEAD and local
+builds. Configure `[memory]` in `~/.config/taskix/config.toml` with your model
+provider. For builds containing [Agentix PR #200](https://github.com/tenfyzhong/agentix/pull/200),
+put `TASKIX_MEMORY_ENABLED=true` and provider credentials in `taskix.env` as
+shown below, then start the service:
 
 ```sh
 brew services start tenfyzhong/tap/taskix
 ```
 
-The formula starts Taskix directly. On macOS/Linux, memory-capable builds with
-login-environment support run the user's account login shell with `-lc`, capture
-its exported environment and replace the service process with the same PID.
-Failed or timed-out lookups retain the inherited environment. The formula does
-not require Fish; if Fish is your login shell, export API keys and proxy variables
-with `set -gx` outside `status is-interactive` guards in your Fish configuration.
-Variables set only in a terminal session are not loaded by a new service process.
-`TASKIX_LOGIN_SHELL` can select a different absolute shell path when supplied to
-the service process. This code change must be included in the installed build.
+Older builds require exported login-shell variables instead. On macOS/Linux,
+login-environment support captures the account login shell's exported variables;
+failed or timed-out lookups retain the inherited environment. For Fish, use
+`set -Ux TASKIX_MEMORY_ENABLED true`; variables set only in a terminal session
+are not available to a new service process. The formula does not require Fish.
+`TASKIX_LOGIN_SHELL` selects an absolute login-shell path when supplied to the
+service process.
 
-Reload configuration for future service work with `taskix reload` (release
-0.5.0: `taskix memory reload`). Invalid configuration leaves the active settings
-unchanged. Storage paths and IPC limits require a restart.
-
-After changing Fish variables or upgrading Taskix, restart and check the service:
+Use `taskix reload` for TOML configuration changes affecting future work. Invalid
+configuration leaves the active settings unchanged. Restart after changing `.env`
+files, inherited shell variables, storage paths, IPC limits or the installed build:
 
 ```sh
 brew services restart tenfyzhong/tap/taskix
-taskix memory status
+taskix status
 ```
+
+Legacy release 0.5.0 uses `taskix memory serve`, `taskix memory reload` and
+`taskix memory status` instead of the top-level service commands.
 
 Logs are written to `$(brew --prefix)/var/log/taskix.log` and
 `$(brew --prefix)/var/log/taskix.err.log`. Stop any separately started
 `taskix serve` (or legacy `taskix memory serve`) process before switching to the
 Homebrew service.
+
+### Local environment files (PR #200)
+
+This section requires a build containing [Agentix PR #200](https://github.com/tenfyzhong/agentix/pull/200).
+The PR is merged into upstream `main`, but the tap's stable 0.7.3 packages do not
+include it. Use a current `--HEAD` build or a
+[local build](#installing-local-agentix-binaries) containing that change until
+it is included in a stable release.
+
+Keep TOML settings in `config.toml` and environment defaults in a separate file
+beside it:
+
+| Program | Default environment file |
+| --- | --- |
+| Agentix | `~/.config/agentix/agentix.env` |
+| Taskix | `~/.config/taskix/taskix.env` |
+
+The CLIs use the corresponding `.env` file beside the TOML path selected by
+`--config` (Taskix also accepts `TASKIX_CONFIG`). Plugins use `AGENTIX_CONFIG`
+or `TASKIX_CONFIG` to select a custom TOML path. Set these selectors in the
+invoking environment or command; they locate the file to load.
+The tap currently installs only the TOML examples. Create the `.env` files
+manually and use the matching source checkout's `config/agentix.env.example`
+and `config/taskix.env.example` as references. For example:
+
+```dotenv
+# ~/.config/taskix/taskix.env
+TASKIX_MEMORY_ENABLED=true
+OPENAI_API_KEY=replace-with-your-provider-key
+```
+
+Use the credential variable referenced by your TOML provider configuration.
+Protect credential files with `chmod 600` and keep them out of version control.
+Move old TOML `[environment]` entries into these files as `KEY=value` entries,
+without the table header. Use `TASKIX_` names in place of the old `AGENT_TASK_`
+settings. Values are literals: shell commands and variable expansion are not run.
+
+The CLIs load these defaults automatically, including when launched through
+`brew services`; global shell exports are optional. Inherited environment
+variables, including empty values, take precedence. Remove stale exported values
+if you want file defaults to apply. Updated plugins load and cache the files once
+per path per process without changing the host's `process.env`; restart resident
+plugin hosts after edits. Node plugins require Node 20.12.0 or 21.7.0 and newer
+(`^20.12.0 || >=21.7.0`) for the built-in dotenv parser, with no added parser
+dependency.
+
+Restart the affected Homebrew service after editing its `.env` file:
+
+```sh
+brew services restart tenfyzhong/tap/agentix
+brew services restart tenfyzhong/tap/taskix
+```
+
+If another program needs shell exports, `agentix env` and `taskix env` print a
+script for the actual calling shell; `--shell` explicitly selects a target.
+Inspect the output before sourcing it. In Fish, `taskix env | source` uses
+persistent universal exports (`set -Ux`), so it is unnecessary when only Taskix
+and its plugins need the values.
 
 ### Taskix backup
 

@@ -74,17 +74,19 @@ class Taskix < Formula
         taskix obsidian setup
         taskix sync
 
-      Configure [memory] and export TASKIX_MEMORY_ENABLED=true in your login shell,
-      then start the Taskix service:
+      Configure [memory] in config.toml. Builds containing Agentix PR #200 load
+      taskix.env beside config.toml; put TASKIX_MEMORY_ENABLED=true and provider
+      credentials there. Inherited variables override file defaults.
+      This is not available in stable 0.7.3. See the tap README for migration.
+      Older builds require exported login-shell variables; for fish use set -Ux.
+      Start the Taskix service:
         brew services start tenfyzhong/tap/taskix
 
-      On macOS/Linux, Taskix loads exported variables from your login shell.
-      If your login shell is fish, put service variables outside any
-      `status is-interactive` guard, then restart after changing them.
-      With a build containing the top-level service commands, reload config with:
+      Restart the service and resident plugins after editing env files or shell
+      variables. For TOML changes affecting future service work, use:
         taskix reload
-      Release 0.5.0 uses taskix memory serve and taskix memory reload instead.
-      Use a current HEAD or local build for taskix serve and taskix reload.
+      Check the service with taskix status.
+      Legacy release 0.5.0 uses taskix memory serve, reload and status instead.
     EOS
   end
 
