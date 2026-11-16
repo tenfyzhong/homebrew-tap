@@ -54,7 +54,7 @@ for (const [spec, version, args] of [
         const result = spawnSync("brew", ["ruby", "-e", `
 require "formulary"
 require "json"
-f = Formulary.factory(ARGV.fetch(0), ARGV.fetch(1).to_sym)
+f = Formulary.from_path(ARGV.fetch(0), ARGV.fetch(1).to_sym)
 f.stable.version(ARGV.fetch(2)) unless ARGV.fetch(2).empty?
 puts JSON.generate(f.service.command)
 `, new URL("../Formula/taskix.rb", import.meta.url).pathname, spec, version], {
@@ -84,7 +84,7 @@ test("taskix_local_service_uses_top_level_serve", { skip }, async t => {
     const result = spawnSync("brew", ["ruby", "-e", `
 require "formulary"
 require "json"
-f = Formulary.factory(ARGV.fetch(0), :stable)
+f = Formulary.from_path(ARGV.fetch(0), :stable)
 puts JSON.generate(f.service.command)
 `, path], { encoding: "utf8", env, timeout: 120_000 });
     assert.equal(result.status, 0, result.stdout + result.stderr);
