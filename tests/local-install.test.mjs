@@ -102,7 +102,7 @@ test("real_homebrew_links_local_artifacts_when_stable_opt_and_head_links_diverge
         }
         await rm(source, {recursive: true});
         const installed = await realpath(join(prefix, "opt", name));
-        const info = brew(["ruby", "-e", 'require "formulary"; f = Formulary.factory(Pathname(ARGV[0])); abort unless f.version.to_s.include?("local"); puts f.version', join(installed, ".brew", `${name}.rb`)]);
+        const info = brew(["ruby", "-e", 'require "formulary"; f = Formulary.from_path(Pathname(ARGV[0])); abort unless f.version.to_s.include?("local"); puts f.version', join(installed, ".brew", `${name}.rb`)]);
         assert.match(info, /local/);
     } finally {
         try { brew(["uninstall", "--force", `${tap}/${name}`]); } catch { /* Setup may have failed. */ }

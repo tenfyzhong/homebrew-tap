@@ -137,7 +137,7 @@ test("homebrew_formula_loading_snapshots_release_binary", {
     execFileSync("brew", ["trust", tap], {env: {...process.env, HOMEBREW_NO_AUTO_UPDATE: "1"}});
     const formula = join(tapPath, "Formula", "agentix.rb");
     await writeFile(formula, `require ${JSON.stringify(helper)}\nclass Agentix < Formula\n  desc "Snapshot fixture"\n  homepage "https://example.invalid"\n  url "https://example.invalid/agentix-1.2.3.tar.gz"\n  sha256 "${"0".repeat(64)}"\n  AgentixLocalBuild.configure(self, "agentix", __dir__)\nend\n`);
-    const result = spawnSync("brew", ["ruby", "-e", 'require "formulary"; 2.times { Formulary.clear_cache; AgentixLocalBuild.instance_variable_set(:@snapshots, {}) if defined?(AgentixLocalBuild); f = Formulary.factory(Pathname(ARGV[0]), :stable); puts JSON.generate({url: f.stable.url, version: f.pkg_version.to_s}) }', formula], {encoding: "utf8", env: {...f.env(), HOMEBREW_NO_INSTALL_FROM_API: "1", HOMEBREW_NO_AUTO_UPDATE: "1"}, timeout: 90_000});
+    const result = spawnSync("brew", ["ruby", "-e", 'require "formulary"; 2.times { Formulary.clear_cache; AgentixLocalBuild.instance_variable_set(:@snapshots, {}) if defined?(AgentixLocalBuild); f = Formulary.from_path(Pathname(ARGV[0]), :stable); puts JSON.generate({url: f.stable.url, version: f.pkg_version.to_s}) }', formula], {encoding: "utf8", env: {...f.env(), HOMEBREW_NO_INSTALL_FROM_API: "1", HOMEBREW_NO_AUTO_UPDATE: "1"}, timeout: 90_000});
     assert.equal(result.status, 0, result.stderr);
     assert.equal(new Set(result.stdout.trim().split("\n")).size, 1);
     const data = JSON.parse(result.stdout.trim().split("\n").at(-1));

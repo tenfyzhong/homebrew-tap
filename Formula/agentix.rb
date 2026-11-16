@@ -57,6 +57,11 @@ class Agentix < Formula
         mkdir -p ~/.config/agentix
         cp #{pkgshare}/agentix.example.toml ~/.config/agentix/config.toml
 
+      Builds containing Agentix PR #200 also load agentix.env beside config.toml.
+      Put environment defaults and credentials there; inherited variables win.
+      This is not available in stable 0.7.3. See the tap README for migration.
+      Restart the service and resident plugins after editing the env file.
+
       Then edit the configuration and start the service:
         brew services start tenfyzhong/tap/agentix
     EOS
