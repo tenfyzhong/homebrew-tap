@@ -3,6 +3,7 @@
 require "digest"
 require "fileutils"
 require "json"
+require "open3"
 require "rubygems/package"
 require "tempfile"
 require "uri"
@@ -49,6 +50,11 @@ module AgentixLocalBuild
   def self.create_snapshot(name, source, target, profile)
     previous_epoch = ENV.fetch("SOURCE_DATE_EPOCH", nil)
     files = artifact_files(name, source, target, profile)
+    output, status = Open3.capture2(files.fetch("bin/#{name}"), "-V")
+    match = output.strip.match(/\A#{Regexp.escape(name)} (\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?)\z/)
+    raise "Invalid local binary version from #{name} -V" unless status.success? && match
+
+    version = match[1]
     cache = defined?(HOMEBREW_CACHE) ? HOMEBREW_CACHE.to_s : ENV.fetch("HOMEBREW_CACHE")
     cache = File.join(cache, "agentix-local-artifacts")
     FileUtils.mkdir_p(cache)
@@ -72,14 +78,43 @@ module AgentixLocalBuild
       end
       file.flush
       digest = Digest::SHA256.file(file.path).hexdigest
-      version = "0.0.0-local.#{digest[0, 16]}.#{profile}"
-      archive = File.join(cache, "#{version}.tar.gz")
+      archive = File.join(cache, "#{version}.#{profile}.#{digest}.tar.gz")
       File.rename(file.path, archive) unless File.file?(archive)
       { "url" => "file://#{URI::DEFAULT_PARSER.escape(archive)}", "version" => version,
         "sha256" => digest, "profile" => profile }
     end
   ensure
     ENV["SOURCE_DATE_EPOCH"] = previous_epoch
+  end
+
+  # Stage the exact CLI version, replacing changed content without selecting another keg.
+  def self.stage(formula)
+    data = artifact_snapshot(formula.name, ENV.fetch("HOMEBREW_AGENTIX_LOCAL_SOURCE"))
+    unless formula.prefix.directory?
+      raise "Local install failed: #{formula.full_name}" unless system(
+        HOMEBREW_BREW_FILE.to_s, "install", "--build-from-source", "--skip-link", formula.full_name
+      )
+      return
+    end
+
+    manifest = formula.pkgshare/"agentix-local.json"
+    if manifest.file?
+      installed = JSON.parse(manifest.read)
+      return if installed.values_at("sha256", "profile") == data.values_at("sha256", "profile")
+    end
+
+    require "formula_installer"
+    require "reinstall"
+    keg = Keg.new(formula.prefix)
+    installer = FormulaInstaller.new(formula, link_keg: false,
+                                    build_from_source_formulae: [formula.full_name])
+    installer.prelude
+    installer.fetch
+    context = Homebrew::Reinstall::InstallationContext.new(
+      formula_installer: installer, keg: keg, formula: formula,
+      options: Options.new, link_keg: keg.linked?
+    )
+    Homebrew::Reinstall.reinstall_formula(context)
   end
 
   def self.active?(name, formula_dir)
