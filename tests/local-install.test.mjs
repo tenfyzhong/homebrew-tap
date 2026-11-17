@@ -72,7 +72,7 @@ test("real_homebrew_links_local_artifacts_when_stable_opt_and_head_links_diverge
         await writeFile(formulaPath, formula);
         const command = join(prefix, "bin", name);
         for (const [iteration, profile] of [[1, "release"], [2, "release"], [3, "debug"]]) {
-            const text = `fn main() { println!("${name} dirty-${iteration}-{}", if cfg!(debug_assertions) { "debug" } else { "release" }); }\n`;
+            const text = `fn main() { if std::env::args().any(|arg| arg == "-V") { println!("${name} 0.8.2+dev.21839dcd319f.dirty"); } else { println!("${name} dirty-${iteration}-{}", if cfg!(debug_assertions) { "debug" } else { "release" }); } }\n`;
             await writeFile(main, text);
             const local = {HOMEBREW_AGENTIX_LOCAL_SOURCE: source, HOMEBREW_AGENTIX_LOCAL_PROFILE: profile};
             // Compile outside Homebrew, exactly as make release/make does.
@@ -82,7 +82,7 @@ test("real_homebrew_links_local_artifacts_when_stable_opt_and_head_links_diverge
             const deps = JSON.parse(brew(["info", "--json=v2", `${tap}/${name}`], local)).formulae[0];
             assert.deepEqual(deps.build_dependencies, []);
             assert.deepEqual(deps.dependencies, []);
-            brew(["install", "--build-from-source", "--skip-link", `${tap}/${name}`], local);
+            brew(["ruby", "-e", 'require "formulary"; formula = Formulary.factory(ARGV[0], :stable); AgentixLocalBuild.stage(formula)', `${tap}/${name}`], local);
             brew(["ruby", "-e", 'require "formulary"; require "unlink"; kegs = ARGV.map { |name| f = Formulary.factory(name, :stable); abort "Not installed: #{f.prefix}" unless f.prefix.directory?; Keg.new(f.prefix) }; kegs.each { |keg| ref = HOMEBREW_LINKED_KEGS/keg.name; Homebrew::Unlink.unlink(Keg.new(ref.realpath)) if ref.symlink? }; kegs.each { |keg| keg.lock { keg.link } }', `${tap}/${name}`], local);
             assert.equal(execFileSync(command, ["--version"], {encoding: "utf8"}).trim(), `${name} dirty-${iteration}-${profile}`);
             assert.equal(await readFile(main, "utf8"), text);
@@ -90,7 +90,7 @@ test("real_homebrew_links_local_artifacts_when_stable_opt_and_head_links_diverge
             assert.ok(await readFile(join(stable, "bin", name)));
             assert.ok(await readFile(join(headKeg, "bin", name)));
             const keg = await realpath(join(prefix, "opt", name));
-            assert.match(keg, new RegExp(`0\\.0\\.0-local\\..*\\.${profile}$`));
+            assert.equal(keg.split("/").at(-1), "0.8.2+dev.21839dcd319f.dirty");
             assert.equal(await realpath(command), join(keg, "bin", name));
             assert.deepEqual(await readFile(command), expectedBinary);
             assert.equal(await readFile(join(keg, "share", name, `${name}.example.toml`), "utf8"), "fixture = true\n");
@@ -102,8 +102,8 @@ test("real_homebrew_links_local_artifacts_when_stable_opt_and_head_links_diverge
         }
         await rm(source, {recursive: true});
         const installed = await realpath(join(prefix, "opt", name));
-        const info = brew(["ruby", "-e", 'require "formulary"; f = Formulary.from_path(Pathname(ARGV[0])); abort unless f.version.to_s.include?("local"); puts f.version', join(installed, ".brew", `${name}.rb`)]);
-        assert.match(info, /local/);
+        const info = brew(["ruby", "-e", 'require "formulary"; f = Formulary.from_path(Pathname(ARGV[0])); abort unless f.version.to_s == "0.8.2+dev.21839dcd319f.dirty"; puts f.version', join(installed, ".brew", `${name}.rb`)]);
+        assert.equal(info.trim(), "0.8.2+dev.21839dcd319f.dirty");
     } finally {
         try { brew(["uninstall", "--force", `${tap}/${name}`]); } catch { /* Setup may have failed. */ }
         try { brew(["untrust", "--formula", `${tap}/${name}`]); brew(["untrust", tap]); } catch { /* Setup may have failed. */ }

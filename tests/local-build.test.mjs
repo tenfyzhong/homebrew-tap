@@ -16,9 +16,13 @@ test("existing_local_formulae_load_with_precompiled_release_artifacts", {
     for (const name of ["taskix", "agentix"]) {
         const result = spawnSync("brew", ["ruby", "-e", `require "formulary"; puts Formulary.factory("tenfyzhong/tap/${name}", :stable).pkg_version`], {encoding: "utf8", env: {...process.env, HOMEBREW_AGENTIX_LOCAL_SOURCE: process.env.AGENTIX_TEST_SOURCE, HOMEBREW_AGENTIX_LOCAL_PROFILE: "release", HOMEBREW_NO_AUTO_UPDATE: "1"}, timeout: 90_000});
         assert.equal(result.status, 0, result.stderr);
-        assert.match(result.stdout.trim(), /^0\.0\.0-local\..*\.release$/);
+        const expected = execFileSync(join(process.env.AGENTIX_TEST_SOURCE, "target/release", name), ["-V"], {encoding: "utf8"}).trim().split(" ")[1];
+        assert.equal(result.stdout.trim(), expected);
     }
 });
+function binary(name = "agentix", payload = "", version = "0.8.2+dev.21839dcd319f") {
+    return `#!/bin/sh\necho '${name} ${version}'\nexit 0\n${payload}`;
+}
 const script = `require "json"
 require ARGV.shift
 class Spec
@@ -43,7 +47,7 @@ async function fixture(t) {
     for (const name of ["agentix", "taskix"]) {
         for (const profile of ["release", "debug"]) {
             const path = join(source, "target", profile, name);
-            await writeFile(path, `${name} ${profile} binary\n`);
+            await writeFile(path, binary(name, `${name} ${profile} binary\n`));
             await chmod(path, 0o755);
         }
         for (const path of [`config/${name}.example.toml`, `completions/${name}.bash`, `completions/_${name}`, `completions/${name}.fish`]) await writeFile(join(source, path), "# fixture\n");
@@ -58,11 +62,11 @@ test("formula_snapshots_selected_prebuilt_binary_and_resources", async t => {
     const result = f.run();
     assert.equal(result.status, 0, result.stderr);
     const data = JSON.parse(result.stdout);
-    assert.match(data.spec.version, /^0\.0\.0-local\..*\.release$/);
+    assert.match(data.spec.version, /^0\.8\.2\+dev\.21839dcd319f$/);
     const unpack = join(f.dir, "unpack");
     await mkdir(unpack);
     execFileSync("tar", ["-xzf", fileURLToPath(data.spec.url), "-C", unpack]);
-    assert.equal(await readFile(join(unpack, "bin/agentix"), "utf8"), "agentix release binary\n");
+    assert.equal(await readFile(join(unpack, "bin/agentix"), "utf8"), binary("agentix", "agentix release binary\n"));
     assert.equal(await readFile(join(unpack, "config/agentix.example.toml"), "utf8"), "# fixture\n");
     const listing = execFileSync("tar", ["-tzf", fileURLToPath(data.spec.url)], {encoding: "utf8"});
     assert.doesNotMatch(listing, /target\/|modified\.rs|Cargo.toml|taskix/);
@@ -77,7 +81,7 @@ function largeBinary() {
         state ^= state << 5;
         binary[i] = i % 4 === 3 ? 0x94 : state & 0xff;
     }
-    return binary;
+    return Buffer.concat([Buffer.from("#!/bin/sh\necho agentix 0.8.2+dev.21839dcd319f\nexit 0\n"), binary]);
 }
 
 test("large_binary_snapshot_preserves_bytes_and_reproducible_identity", async t => {
@@ -153,11 +157,12 @@ test("artifact_identity_changes_with_binary_or_resource_but_not_uncompiled_sourc
     assert.deepEqual(JSON.parse(f.run().stdout), first);
     await writeFile(join(f.source, "modified.rs"), "new uncompiled source\n");
     assert.deepEqual(JSON.parse(f.run().stdout), first);
-    await writeFile(join(f.source, "target/release/agentix"), "changed binary\n");
+    await writeFile(join(f.source, "target/release/agentix"), binary("agentix", "changed binary\n"));
     const second = JSON.parse(f.run().stdout);
-    assert.notEqual(second.spec.version, first.spec.version);
+    assert.equal(second.spec.version, first.spec.version);
+    assert.notEqual(second.spec.url, first.spec.url);
     await writeFile(join(f.source, "completions/agentix.bash"), "changed completion\n");
-    assert.notEqual(JSON.parse(f.run().stdout).spec.version, second.spec.version);
+    assert.notEqual(JSON.parse(f.run().stdout).spec.url, second.spec.url);
 });
 
 test("debug_profile_snapshots_debug_binary_with_separate_identity", async t => {
@@ -166,7 +171,8 @@ test("debug_profile_snapshots_debug_binary_with_separate_identity", async t => {
     const result = f.run(f.source, "debug");
     assert.equal(result.status, 0, result.stderr);
     const debug = JSON.parse(result.stdout);
-    assert.notEqual(debug.spec.version, release.spec.version);
+    assert.equal(debug.spec.version, release.spec.version);
+    assert.notEqual(debug.spec.url, release.spec.url);
     assert.match(execFileSync("tar", ["-xOzf", fileURLToPath(debug.spec.url), "bin/agentix"], {encoding: "utf8"}), /debug binary/);
 });
 
@@ -174,11 +180,11 @@ test("custom_target_directory_is_supported", async t => {
     const f = await fixture(t);
     const target = join(f.dir, "custom target");
     await mkdir(join(target, "release"), {recursive: true});
-    await writeFile(join(target, "release/agentix"), "custom binary\n");
+    await writeFile(join(target, "release/agentix"), binary("agentix", "custom binary\n"));
     await chmod(join(target, "release/agentix"), 0o755);
     const result = f.run(f.source, "release", join(f.dir, "Formula"), target);
     assert.equal(result.status, 0, result.stderr);
-    assert.equal(execFileSync("tar", ["-xOzf", fileURLToPath(JSON.parse(result.stdout).spec.url), "bin/agentix"], {encoding: "utf8"}), "custom binary\n");
+    assert.equal(execFileSync("tar", ["-xOzf", fileURLToPath(JSON.parse(result.stdout).spec.url), "bin/agentix"], {encoding: "utf8"}), binary("agentix", "custom binary\n"));
 });
 
 test("upstream_formula_is_unchanged_without_local_input", async t => {
@@ -269,3 +275,24 @@ test("missing_input_preserves_source_date_epoch", async t => {
     const result = spawnSync("ruby", ["-e", 'require ARGV.shift; begin; AgentixLocalBuild.snapshot("agentix", ARGV.shift); rescue; puts ENV["SOURCE_DATE_EPOCH"]; end', helper, join(f.dir, "Formula")], {encoding: "utf8", env: {...f.env(), SOURCE_DATE_EPOCH: "123"}});
     assert.equal(result.stdout.trim(), "123");
 });
+
+for (const name of ["agentix", "taskix"]) {
+    for (const version of ["0.8.2+dev.21839dcd319f", "0.8.2+dev.21839dcd319f.dirty", "0.8.2", "0.8.2+dev.unknown"]) {
+        test(`${name}_snapshot_uses_binary_version_${version}`, async t => {
+            const f = await fixture(t);
+            await writeFile(join(f.source, "target/release", name), binary(name, "", version));
+            const result = spawnSync(ruby, [...rubyArgs, "-e", 'require ARGV.shift; puts JSON.generate(AgentixLocalBuild.snapshot(ARGV.shift, "."))', helper, name], {encoding: "utf8", env: f.env()});
+            assert.equal(result.status, 0, result.stderr);
+            assert.equal(JSON.parse(result.stdout).version, version);
+        });
+    }
+}
+for (const output of ["garbage", "agentix ../escape", "taskix 0.8.2", "agentix 0.8.2\nextra"]) {
+    test(`snapshot_rejects_invalid_binary_version_${JSON.stringify(output)}`, async t => {
+        const f = await fixture(t);
+        await writeFile(join(f.source, "target/release/agentix"), `#!/bin/sh\nprintf '%s\\n' '${output}'\n`);
+        const result = f.run();
+        assert.notEqual(result.status, 0);
+        assert.match(result.stderr, /version/i);
+    });
+}

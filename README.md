@@ -415,18 +415,25 @@ untouched.
 Snapshots are written to a temporary tar file and compressed with the platform
 `gzip -n`, avoiding Ruby `GzipWriter` buffer errors on large release binaries.
 Temporary disk space must accommodate both the tar and its compressed archive.
-Changing the compressor can produce a new local version for identical inputs;
+Changing the compressor can produce a new archive for identical inputs;
 repeat updates with the same inputs and compressor retain the same identity.
 
-Each artifact/profile snapshot uses a content-derived
-`0.0.0-local.<digest>.<profile>` Cellar version. Installed metadata includes the
+Each snapshot uses the binary's `-V` output as its Cellar version, for example
+`0.8.2+dev.21839dcd319f`. Agentix and Taskix use the same rule, including `.dirty`
+when present. The archive name retains the full content digest and profile.
+Only one profile can exist per CLI version; `make update VERSION=local` replaces
+a same-version keg when its content or profile changes, using Homebrew's reinstall
+backup and failure recovery. Direct `brew install` does not replace an already
+installed version; use `make update VERSION=local` for same-version updates.
+Identical snapshots are reused. Installed metadata
+includes the
 helper and snapshot record, so it remains readable after removing the checkout.
 Homebrew owns the installed kegs; linking selects the exact installed snapshot.
 Services are not restarted automatically.
 
 The Agentix Makefile wraps this operation as `make update VERSION=local`, with
 `PROFILE=release|debug`, `FORMULAE=agentix|taskix` and `CARGO_TARGET_DIR` support.
-It runs the same install with `--skip-link`, then its exact local switch only
+It stages snapshots through `AgentixLocalBuild.stage`, then runs its exact local switch only
 after all selected installations succeed.
 `make switch VERSION=local` selects an already installed local build without
 building or installing. To return to an upstream release or remote HEAD, unset
