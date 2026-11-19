@@ -8,15 +8,15 @@ require local_library
 class Taskix < Formula
   desc "Coordinate agent tasks with leases, plans, and Markdown boards"
   homepage "https://github.com/tenfyzhong/agentix"
-  url "https://github.com/tenfyzhong/agentix/archive/refs/tags/0.8.2.tar.gz"
-  sha256 "b9aa1071da95b3e9c2039ffe039f92b214e51290f9a047ac178eb53115709501"
+  url "https://github.com/tenfyzhong/agentix/archive/refs/tags/0.8.3.tar.gz"
+  sha256 "0de9d5eb54a3e6be10e333364c5cca4e2d561339e534f0fe2d3759a22a12f2f3"
   license "MIT"
 
   bottle do
-    root_url "https://github.com/tenfyzhong/agentix/releases/download/0.8.2"
-    sha256 cellar: :any_skip_relocation, arm64_sequoia: "f533265da0d156527e39ddd840bc6a4f09ad408ce27756461ffcf754b61dc395"
-    sha256 cellar: :any_skip_relocation, arm64_linux:   "1eb09b64c0d2ef9da28ee0f8072a2d8ee59564c09f35baed985b13bfd8c4ea2d"
-    sha256 cellar: :any_skip_relocation, x86_64_linux:  "81aadef2dae44e0be8aef36881e4c0ffe22d1a8b8739db76224dbbd5d6c5723e"
+    root_url "https://github.com/tenfyzhong/agentix/releases/download/0.8.3"
+    sha256 cellar: :any_skip_relocation, arm64_sequoia: "36efafa8b7890c3ba167551a803e4f613b69d6e5b9d0aae8dec8c879717a76f3"
+    sha256 cellar: :any_skip_relocation, arm64_linux:   "dde42722c20c6d54796fcffbaded2df19ab8e59ba6833c74b2febfb7a297a534"
+    sha256 cellar: :any_skip_relocation, x86_64_linux:  "b49e16146f68053ab1908cf06036814e6e3e9a81fe12321bff1941a447ea178d"
   end
 
   AgentixLocalBuild.configure(self, "taskix", __dir__)
